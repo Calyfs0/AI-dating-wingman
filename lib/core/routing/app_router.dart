@@ -157,13 +157,13 @@ GoRouter createAppRouter(AppController controller) {
           GoRoute(
             path: 'photos',
             builder: (_, state) => PhotoAnalysisScreen(
-              audit: state.extra as ProfileAudit,
+              audit: state.extra as ProfileAudit? ?? _demoProfileAudit,
             ),
           ),
           GoRoute(
             path: 'bio',
             builder: (_, state) => BioRewriteScreen(
-              audit: state.extra as ProfileAudit,
+              audit: state.extra as ProfileAudit? ?? _demoProfileAudit,
             ),
           ),
         ],
@@ -177,11 +177,19 @@ GoRouter createAppRouter(AppController controller) {
       GoRoute(
         path: '/practice/feedback',
         builder: (_, state) {
-          final extra = state.extra as Map<String, dynamic>;
+          final extra = state.extra as Map<String, dynamic>?;
           return PracticeFeedbackScreen(
-            response: extra['response'] as String,
-            feedback: extra['feedback'] as PracticeFeedback,
-            topic: extra['topic'] as PracticeTopic,
+            response: extra?['response'] as String? ??
+                'I liked how easy it felt talking to you — coffee this weekend?',
+            feedback: extra?['feedback'] as PracticeFeedback? ??
+                const PracticeFeedback(
+                  summary:
+                      'Good answer. You sounded confident, but you didn\'t give them much to continue with.',
+                  confidence: 8,
+                  naturalness: 9,
+                  conversation: 6,
+                ),
+            topic: extra?['topic'] as PracticeTopic? ?? PracticeTopic.firstDate,
           );
         },
       ),
@@ -210,6 +218,39 @@ GoRouter createAppRouter(AppController controller) {
     errorBuilder: (_, __) => const GenericErrorScreen(),
   );
 }
+
+const _demoProfileAudit = ProfileAudit(
+  id: 'demo-audit',
+  overallStrength: 7.8,
+  clarity: 0.82,
+  personality: 0.74,
+  approachability: 0.8,
+  conversationPotential: 0.71,
+  currentBio: 'Love travel, coffee, and good conversations.',
+  suggestedBio:
+      'Usually planning my next trip before I\'ve finished the current one.\nCoffee, bad jokes and finding underrated places to eat.',
+  photos: [
+    ProfilePhotoReview(
+      id: '1',
+      verdict: PhotoVerdict.keep,
+      reason:
+          'Strong first impression. Face is clear and the photo feels natural.',
+      recommendedOrder: 1,
+    ),
+    ProfilePhotoReview(
+      id: '2',
+      verdict: PhotoVerdict.replace,
+      reason: 'The group makes it unclear who you are.',
+      recommendedOrder: 4,
+    ),
+    ProfilePhotoReview(
+      id: '3',
+      verdict: PhotoVerdict.reorder,
+      reason: 'Good lifestyle signal — better as photo 2 or 3.',
+      recommendedOrder: 2,
+    ),
+  ],
+);
 
 /// Convenience accessor when a BuildContext already has AppController.
 GoRouter routerOf(BuildContext context) {

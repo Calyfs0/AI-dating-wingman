@@ -191,6 +191,11 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
   @override
   void initState() {
     super.initState();
+    // Demo screenshot hold: stay on the processing frame.
+    if (Uri.base.queryParameters['hold'] == '1') {
+      _stage = ProcessingStage.analyzing;
+      return;
+    }
     _run();
   }
 
