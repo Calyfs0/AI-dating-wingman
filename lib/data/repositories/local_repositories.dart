@@ -1,13 +1,13 @@
 import 'package:uuid/uuid.dart';
 import '../../domain/entities/ai_generation.dart';
+import '../../domain/entities/conversation.dart';
 import '../../domain/entities/person.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/repositories/repositories.dart';
 import '../../services/auth/auth_service.dart';
-import '../mock/demo_data.dart';
 
 class LocalPersonRepository implements PersonRepository {
-  LocalPersonRepository() : _people = List<Person>.from(DemoData.people);
+  LocalPersonRepository() : _people = [];
 
   final List<Person> _people;
   static const _uuid = Uuid();
@@ -57,6 +57,14 @@ class LocalPersonRepository implements PersonRepository {
   Future<void> delete(String id) async {
     _people.removeWhere((p) => p.id == id);
   }
+}
+
+class LocalConversationRepository implements ConversationRepository {
+  @override
+  Future<List<Conversation>> listForPerson(String personId) async => const [];
+
+  @override
+  Future<Conversation?> latestForPerson(String personId) async => null;
 }
 
 class LocalFeedbackRepository implements FeedbackRepository {

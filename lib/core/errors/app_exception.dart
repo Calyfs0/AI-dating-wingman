@@ -62,13 +62,23 @@ class AppExceptionMapper {
   static AppException map(Object error) {
     if (error is AppException) return error;
     final text = error.toString().toLowerCase();
+    if (text.contains('usage') && text.contains('limit')) {
+      return const UsageLimitException();
+    }
     if (text.contains('socket') ||
         text.contains('network') ||
         text.contains('offline') ||
-        text.contains('failed host lookup')) {
+        text.contains('failed host lookup') ||
+        text.contains('connection')) {
       return const NetworkException();
     }
     if (text.contains('timeout')) return const TimeoutException();
+    if (text.contains('functionexception') || text.contains('functions_http')) {
+      if (text.contains('402') || text.contains('usage_limit')) {
+        return const UsageLimitException();
+      }
+      return const AnalysisException();
+    }
     return const UnknownAppException();
   }
 }

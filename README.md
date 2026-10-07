@@ -27,18 +27,13 @@ Secrets never live in the Flutter client. Entitlements come from RevenueCat. Usa
 
 ## Run
 
+Full setup (Supabase project, OpenAI secret, migrations, Edge Functions): see [docs/SETUP.md](docs/SETUP.md).
+
+Supabase URL + anon key: [`lib/core/config/supabase_config.dart`](lib/core/config/supabase_config.dart).
+
 ```bash
 flutter pub get
 flutter run
-```
-
-Optional runtime config (public keys only):
-
-```bash
-flutter run \
-  --dart-define=SUPABASE_URL=... \
-  --dart-define=SUPABASE_ANON_KEY=... \
-  --dart-define=REVENUECAT_API_KEY=...
 ```
 
 ## Privacy

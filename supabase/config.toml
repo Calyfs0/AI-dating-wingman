@@ -1,0 +1,11 @@
+# Minimal Supabase config for Wingman Edge Functions.
+# Link with: npx supabase link --project-ref YOUR_REF
+
+[functions.analyze-conversation]
+verify_jwt = true
+
+[functions.generate-response]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true

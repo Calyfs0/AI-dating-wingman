@@ -449,11 +449,22 @@ class WingmanTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final multiline = maxLines > 1 || (minLines != null && minLines! > 1);
     return TextField(
       controller: controller,
       onChanged: onChanged,
       maxLines: maxLines,
       minLines: minLines,
+      keyboardType:
+          multiline ? TextInputType.multiline : TextInputType.text,
+      textInputAction:
+          multiline ? TextInputAction.newline : TextInputAction.done,
+      enableInteractiveSelection: true,
+      contextMenuBuilder: (context, editableTextState) {
+        return AdaptiveTextSelectionToolbar.editableText(
+          editableTextState: editableTextState,
+        );
+      },
       style: Theme.of(context).textTheme.bodyLarge,
       decoration: InputDecoration(
         hintText: hint,

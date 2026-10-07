@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/greeting.dart';
-import '../../../data/mock/demo_data.dart';
 import '../../controllers/app_controller.dart';
 import '../../widgets/wingman_buttons.dart';
 import '../../widgets/wingman_components.dart';
@@ -118,13 +117,6 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                const SizedBox(height: AppSpacing.sectionGap),
-                WingmanInsightCard(
-                  title: DemoData.homeInsight.title,
-                  body: DemoData.homeInsight.body,
-                  ctaLabel: DemoData.homeInsight.ctaLabel,
-                  onCta: () => context.push('/insights'),
-                ),
               ],
             ),
           ),

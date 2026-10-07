@@ -1,4 +1,5 @@
 import '../entities/ai_generation.dart';
+import '../entities/conversation.dart';
 import '../entities/person.dart';
 import '../entities/user_profile.dart';
 
@@ -8,6 +9,11 @@ abstract class PersonRepository {
   Future<Person> create(Person person);
   Future<Person> update(Person person);
   Future<void> delete(String id);
+}
+
+abstract class ConversationRepository {
+  Future<List<Conversation>> listForPerson(String personId);
+  Future<Conversation?> latestForPerson(String personId);
 }
 
 abstract class FeedbackRepository {
