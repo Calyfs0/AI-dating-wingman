@@ -21,10 +21,19 @@ class PracticeHomeScreen extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) {
           final topic = PracticeTopic.values[index];
+          final icon = switch (topic) {
+            PracticeTopic.firstMessage => Icons.chat_outlined,
+            PracticeTopic.keepingAlive => Icons.bolt_outlined,
+            PracticeTopic.flirting => Icons.favorite_border,
+            PracticeTopic.askingOut => Icons.calendar_month_outlined,
+            PracticeTopic.rejection => Icons.spa_outlined,
+            PracticeTopic.firstDate => Icons.local_cafe_outlined,
+            PracticeTopic.confidence => Icons.fitness_center_rounded,
+          };
           return WingmanFeatureCard(
             title: topic.title,
             subtitle: topic.description,
-            icon: Icons.self_improvement_rounded,
+            icon: icon,
             onTap: () => context.push('/practice/session', extra: topic),
           );
         },

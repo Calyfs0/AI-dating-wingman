@@ -3,13 +3,13 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_animations.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../domain/entities/user_profile.dart';
 import '../../controllers/app_controller.dart';
 import '../../widgets/wingman_buttons.dart';
 import '../../widgets/wingman_cards.dart';
 import '../../widgets/wingman_components.dart';
+import '../../widgets/wingman_logo.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,15 +23,22 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _controller;
   late final Animation<double> _fade;
   late final Animation<double> _scale;
+  late final Animation<double> _progress;
   bool _navigated = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: AppAnimations.splash);
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _scale = Tween<double>(begin: 0.92, end: 1).animate(
+    _scale = Tween<double>(begin: 0.9, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: AppAnimations.standard),
+    );
+    _progress = Tween<double>(begin: 0.08, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) _goNext();
@@ -61,45 +68,40 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: FadeTransition(
-        opacity: _fade,
-        child: ScaleTransition(
-          scale: _scale,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 84,
-                  height: 84,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: AppColors.accentGradient,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accent.withValues(alpha: 0.28),
-                        blurRadius: 28,
-                      ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    'W',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          color: AppColors.textInverse,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fade,
+          child: Column(
+            children: [
+              const Spacer(),
+              ScaleTransition(
+                scale: _scale,
+                child: Column(
+                  children: [
+                    const WingmanLogoMark(size: 96),
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      'Wingman',
+                      style: Theme.of(context).textTheme.displaySmall,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Your private AI dating coach.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                Text('Wingman', style: Theme.of(context).textTheme.headlineLarge),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Your private AI dating coach.',
-                  style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(48, 0, 48, 36),
+                child: AnimatedBuilder(
+                  animation: _progress,
+                  builder: (context, _) =>
+                      WingmanThinProgressBar(value: _progress.value),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -112,85 +114,104 @@ class PromiseScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WingmanScaffold(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          const Spacer(),
-          Container(
-            height: 220,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: AppRadius.cardLarge,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.accent.withValues(alpha: 0.18),
-                  AppColors.surfaceElevated,
+          // Full-bleed atmospheric hero plane (mockup: dating/conversation visual)
+          DecoratedBox(
+            decoration: const BoxDecoration(gradient: AppColors.heroAtmosphere),
+          ),
+          Positioned.fill(
+            child: CustomPaint(painter: _PromiseAtmospherePainter()),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenHorizontal,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Spacer(flex: 5),
+                  Text(
+                    'Dating shouldn\'t\nfeel like guessing.',
+                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                          height: 1.15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Understand conversations.\nFind the right words.\nBecome better at dating.',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppColors.textSecondary,
+                          height: 1.55,
+                        ),
+                  ),
+                  const Spacer(flex: 2),
+                  WingmanButton(
+                    label: 'Let\'s go',
+                    onPressed: () => context.go('/onboarding/focus'),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
                 ],
               ),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: 24,
-                  top: 28,
-                  child: _softBubble('Know what to say'),
-                ),
-                Positioned(
-                  left: 24,
-                  bottom: 36,
-                  child: _softBubble('Become better at dating'),
-                ),
-                Positioned(
-                  left: 40,
-                  top: 88,
-                  child: Icon(
-                    Icons.forum_outlined,
-                    size: 48,
-                    color: AppColors.accent.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.xxl),
-          Text(
-            'Dating shouldn\'t feel like guessing.',
-            style: Theme.of(context).textTheme.displaySmall,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'Understand conversations.\nFind the right words.\nBecome better at dating.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.55,
-                ),
-          ),
-          const Spacer(),
-          WingmanButton(
-            label: 'Let\'s go',
-            onPressed: () => context.go('/onboarding/focus'),
-          ),
-          const SizedBox(height: AppSpacing.lg),
         ],
       ),
     );
   }
+}
 
-  Widget _softBubble(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Text(text, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-    );
+class _PromiseAtmospherePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final soft = Paint()..color = AppColors.accent.withValues(alpha: 0.12);
+    canvas.drawCircle(Offset(size.width * 0.72, size.height * 0.22), 90, soft);
+    canvas.drawCircle(Offset(size.width * 0.28, size.height * 0.34), 60, soft);
+
+    final figure = Paint()..color = Colors.white.withValues(alpha: 0.06);
+    final left = Path()
+      ..addOval(Rect.fromCenter(
+        center: Offset(size.width * 0.38, size.height * 0.28),
+        width: 54,
+        height: 54,
+      ))
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(size.width * 0.38, size.height * 0.40),
+            width: 78,
+            height: 100,
+          ),
+          const Radius.circular(40),
+        ),
+      );
+    final right = Path()
+      ..addOval(Rect.fromCenter(
+        center: Offset(size.width * 0.58, size.height * 0.26),
+        width: 50,
+        height: 50,
+      ))
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(size.width * 0.58, size.height * 0.38),
+            width: 72,
+            height: 96,
+          ),
+          const Radius.circular(40),
+        ),
+      );
+    canvas.drawPath(left, figure);
+    canvas.drawPath(right, figure);
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class FocusScreen extends StatefulWidget {
@@ -202,6 +223,13 @@ class FocusScreen extends StatefulWidget {
 
 class _FocusScreenState extends State<FocusScreen> {
   final Set<FocusArea> _selected = {};
+
+  IconData _iconFor(FocusArea area) => switch (area) {
+        FocusArea.conversations => Icons.forum_outlined,
+        FocusArea.confidence => Icons.psychology_outlined,
+        FocusArea.dating => Icons.favorite_border_rounded,
+        FocusArea.meetPeople => Icons.diversity_3_outlined,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -215,19 +243,20 @@ class _FocusScreenState extends State<FocusScreen> {
             style: Theme.of(context).textTheme.displaySmall,
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text('Select all that apply.', style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            'Select all that apply.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: AppSpacing.xl),
           Expanded(
-            child: ListView.separated(
-              itemCount: FocusArea.values.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, index) {
-                final area = FocusArea.values[index];
+            child: GridView.count(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.92,
+              children: FocusArea.values.map((area) {
                 final selected = _selected.contains(area);
-                return WingmanSelectableCard(
-                  title: area.title,
-                  subtitle: area.subtitle,
-                  selected: selected,
+                return WingmanCard(
                   onTap: () {
                     setState(() {
                       if (selected) {
@@ -237,8 +266,41 @@ class _FocusScreenState extends State<FocusScreen> {
                       }
                     });
                   },
+                  borderColor: selected
+                      ? AppColors.accent.withValues(alpha: 0.55)
+                      : null,
+                  gradient: selected,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? AppColors.accentMuted
+                              : AppColors.surfaceHighlight,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          _iconFor(area),
+                          color: selected
+                              ? AppColors.accent
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(area.title, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(
+                        area.subtitle,
+                        style: Theme.of(context).textTheme.bodySmall,
+                        maxLines: 2,
+                      ),
+                    ],
+                  ),
                 );
-              },
+              }).toList(),
             ),
           ),
           WingmanButton(
@@ -291,8 +353,8 @@ class _StyleOnboardingScreenState extends State<StyleOnboardingScreen> {
           ),
           const SizedBox(height: AppSpacing.xl),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             children: styles
                 .map(
                   (s) => WingmanChip(
@@ -344,7 +406,8 @@ class _StyleOnboardingScreenState extends State<StyleOnboardingScreen> {
                           (p) => p.copyWith(
                             communicationStyles: _selected.toList(),
                             flirtingLevel: _flirting,
-                            learnedStyle: p.learnedStyle.copyWith(flirting: _flirting),
+                            learnedStyle:
+                                p.learnedStyle.copyWith(flirting: _flirting),
                           ),
                         );
                     if (context.mounted) context.go('/onboarding/goal');
@@ -385,10 +448,42 @@ class _GoalScreenState extends State<GoalScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final goal = DatingGoal.values[index];
-                return WingmanSelectableCard(
-                  title: goal.label,
-                  selected: _selected == goal,
+                final selected = _selected == goal;
+                return WingmanCard(
                   onTap: () => setState(() => _selected = goal),
+                  borderColor: selected
+                      ? AppColors.accent.withValues(alpha: 0.55)
+                      : null,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          goal.label,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      AnimatedContainer(
+                        duration: AppAnimations.fast,
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: selected ? AppColors.accent : Colors.transparent,
+                          border: Border.all(
+                            color: selected ? AppColors.accent : AppColors.border,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: selected
+                            ? const Icon(
+                                Icons.circle,
+                                size: 10,
+                                color: AppColors.textInverse,
+                              )
+                            : null,
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
@@ -431,21 +526,26 @@ class PrivacyOnboardingScreen extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           Center(
             child: Container(
-              width: 72,
-              height: 72,
+              width: 84,
+              height: 84,
               decoration: BoxDecoration(
                 color: AppColors.accentMuted,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
+                border: Border.all(
+                  color: AppColors.accent.withValues(alpha: 0.35),
+                ),
               ),
-              child: const Icon(Icons.shield_outlined, color: AppColors.accent, size: 34),
+              child: const Icon(
+                Icons.shield_outlined,
+                color: AppColors.accent,
+                size: 38,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(
             'Your conversations are yours.',
             style: Theme.of(context).textTheme.displaySmall,
-            textAlign: TextAlign.left,
           ),
           const SizedBox(height: AppSpacing.xl),
           ...points.map(
@@ -454,7 +554,11 @@ class PrivacyOnboardingScreen extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+                  const Icon(
+                    Icons.check_circle,
+                    color: AppColors.success,
+                    size: 20,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(p, style: Theme.of(context).textTheme.bodyLarge),
@@ -501,6 +605,8 @@ class NotificationsOnboardingScreen extends StatelessWidget {
                   color: AppColors.textSecondary,
                 ),
           ),
+          const SizedBox(height: AppSpacing.xxl),
+          const WingmanMockNotificationCard(),
           const Spacer(),
           WingmanButton(
             label: 'Allow notifications',
