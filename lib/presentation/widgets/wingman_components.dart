@@ -275,6 +275,13 @@ class WingmanPersonCard extends StatelessWidget {
   final Person person;
   final VoidCallback? onTap;
 
+  Color get _statusColor => switch (person.status) {
+        PersonStatus.active => AppColors.statusActive,
+        PersonStatus.waiting => AppColors.statusWaiting,
+        PersonStatus.dating => AppColors.info,
+        PersonStatus.quiet => AppColors.statusQuiet,
+      };
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -290,7 +297,24 @@ class WingmanPersonCard extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
-              WingmanAvatar(name: person.name),
+              Stack(
+                children: [
+                  WingmanAvatar(name: person.name),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: _statusColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.surface, width: 2),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(

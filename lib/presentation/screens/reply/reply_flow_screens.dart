@@ -7,11 +7,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../domain/entities/ai_generation.dart';
+import '../../../domain/entities/conversation.dart';
 import '../../../services/ai/ai_services.dart';
 import '../../controllers/app_controller.dart';
 import '../../widgets/wingman_buttons.dart';
 import '../../widgets/wingman_cards.dart';
 import '../../widgets/wingman_components.dart';
+import '../../widgets/wingman_logo.dart';
 
 class AddConversationScreen extends StatefulWidget {
   const AddConversationScreen({super.key});
@@ -69,6 +71,12 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: AppSpacing.xl),
+          WingmanDashedDropZone(
+            onTap: () => _pick(ImageSource.gallery),
+            label: 'Drop screenshots here',
+            subtitle: '1–10 images · or choose below',
+          ),
+          const SizedBox(height: AppSpacing.lg),
           WingmanFeatureCard(
             title: 'From Photos',
             subtitle: 'Select one or more screenshots',
@@ -239,18 +247,31 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
       ProcessingStage.building,
     ];
 
+    final stageIndex = stages.indexOf(_stage).clamp(0, stages.length - 1);
+    final progress = (stageIndex + 1) / stages.length;
+
     return WingmanScaffold(
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Spacer(),
+          WingmanCircularProgress(
+            size: 128,
+            progress: progress,
+            child: Icon(
+              Icons.auto_awesome,
+              color: AppColors.accent,
+              size: 36,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
           Text(
             'Reading the conversation...',
-            style: Theme.of(context).textTheme.displaySmall,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: AppSpacing.xxl),
           ...stages.map((stage) {
-            final active = stages.indexOf(stage) <= stages.indexOf(_stage);
+            final active = stages.indexOf(stage) <= stageIndex;
             final current = stage == _stage;
             return Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -273,14 +294,20 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                             ),
                           )
                         : active
-                            ? const Icon(Icons.check, size: 14, color: AppColors.textInverse)
+                            ? const Icon(
+                                Icons.check,
+                                size: 14,
+                                color: AppColors.textInverse,
+                              )
                             : null,
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Text(
                     stage.label,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: active ? AppColors.textPrimary : AppColors.textTertiary,
+                          color: active
+                              ? AppColors.textPrimary
+                              : AppColors.textTertiary,
                         ),
                   ),
                 ],
@@ -323,7 +350,22 @@ class AnalysisOverviewScreen extends StatelessWidget {
             '${conversation.platform} · Active',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.lg),
+          // Mockup: conversation snippet before metrics
+          if (conversation.messages.isNotEmpty) ...[
+            WingmanCard(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                children: conversation.messages.take(3).map((m) {
+                  return WingmanMessageBubble(
+                    text: m.text,
+                    isUser: m.speaker == MessageSpeaker.user,
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+          ],
           WingmanProgressBar(label: 'Interest', value: signals.interest),
           const SizedBox(height: AppSpacing.md),
           WingmanProgressBar(label: 'Energy', value: signals.energy),

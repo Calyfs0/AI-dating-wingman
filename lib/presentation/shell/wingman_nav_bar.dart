@@ -43,14 +43,14 @@ class WingmanNavigationBar extends StatelessWidget {
                       onTap: () => onTap(0),
                     ),
                     _NavItem(
-                      icon: Icons.people_alt_rounded,
+                      icon: Icons.chat_bubble_outline_rounded,
                       label: 'People',
                       selected: currentIndex == 1,
                       onTap: () => onTap(1),
                     ),
                     const SizedBox(width: 64),
                     _NavItem(
-                      icon: Icons.self_improvement_rounded,
+                      icon: Icons.fitness_center_rounded,
                       label: 'Practice',
                       selected: currentIndex == 2,
                       onTap: () => onTap(2),
