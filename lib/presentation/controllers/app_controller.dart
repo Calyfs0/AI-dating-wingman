@@ -250,6 +250,75 @@ class AppController extends ChangeNotifier {
   PrivacyService get privacy => _privacy;
   AuthService get auth => _auth;
   NotificationService get notifications => _notifications;
+
+  /// Seeds demo conversation/generation state for screenshot / deep-link demos.
+  void prepareDemoForRoute(String path) {
+    final needsConversation = path.startsWith('/reply/') &&
+        path != '/reply' &&
+        !path.startsWith('/reply/processing');
+    if (needsConversation && activeConversation == null) {
+      activeConversation = Conversation(
+        id: 'demo',
+        personName: 'Emma',
+        platform: 'Hinge',
+        participants: const ['You', 'Emma'],
+        topics: const ['travel', 'live music', 'coffee'],
+        conversationState: ConversationState.active,
+        interestSignals: const ConversationSignals(
+          interest: 0.82,
+          energy: 0.76,
+          momentum: 0.68,
+          reciprocity: 0.91,
+        ),
+        recommendedStrategy: const ConversationStrategy(
+          read:
+              'They\'re engaged and playful, but you\'ve been doing slightly more of the work. This is a good moment to give them something easy to respond to.',
+          dos: [
+            'Make a playful observation.',
+            'Give them something easy to respond to.',
+          ],
+          donts: [
+            'Ask another interview-style question.',
+            'Over-explain.',
+          ],
+        ),
+        confidence: 0.74,
+        messages: const [
+          ConversationMessage(
+            id: '1',
+            text: 'okay wait that trip looked unreal',
+            speaker: MessageSpeaker.other,
+          ),
+          ConversationMessage(
+            id: '2',
+            text: 'haha yeah it was chaotic in the best way',
+            speaker: MessageSpeaker.user,
+          ),
+          ConversationMessage(
+            id: '3',
+            text: 'haha yeah maybe',
+            speaker: MessageSpeaker.other,
+          ),
+        ],
+      );
+    }
+    if ((path.contains('/response') || path.contains('/review')) &&
+        activeGeneration == null) {
+      activeGeneration = const AIGeneration(
+        id: 'demo-gen',
+        text: 'Okay now I\'m curious 😂\nhow did you even end up there?',
+        tone: ResponseTone.playful,
+        alternatives: [
+          'Okay that\'s unfairly interesting. What started it?',
+          'I need the short version of that story.',
+        ],
+        whyItWorks:
+            'It references the conversation, stays light, and gives them an easy opening.',
+        sendWorthiness: 8.4,
+      );
+    }
+    notifyListeners();
+  }
 }
 
 // Re-export for convenience in controller file consumers.

@@ -29,9 +29,10 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    final hasDeepLink = Uri.base.queryParameters['go']?.isNotEmpty == true;
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1100),
+      duration: Duration(milliseconds: hasDeepLink ? 200 : 1100),
     );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _scale = Tween<double>(begin: 0.9, end: 1).animate(
@@ -48,7 +49,20 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _goNext() {
     if (!mounted || _navigated) return;
+    // Screenshot hold: keep splash visible.
+    if (Uri.base.queryParameters['hold'] == '1' &&
+        (Uri.base.queryParameters['go'] == null ||
+            Uri.base.queryParameters['go']!.isEmpty)) {
+      return;
+    }
     _navigated = true;
+    final go = Uri.base.queryParameters['go'];
+    if (go != null && go.isNotEmpty) {
+      final path = go.startsWith('/') ? go : '/$go';
+      context.read<AppController>().prepareDemoForRoute(path);
+      context.go(path);
+      return;
+    }
     final profile = context.read<AppController>().profile;
     if (profile?.onboardingCompleted == true) {
       context.go('/home');
