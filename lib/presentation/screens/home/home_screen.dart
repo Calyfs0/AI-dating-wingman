@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/greeting.dart';
 import '../../controllers/app_controller.dart';
@@ -50,61 +51,77 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xxl),
                 Text(
-                  'What are we working on?',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  'Know what to say next.',
+                  style: Theme.of(context).textTheme.displaySmall,
                 ),
-                const SizedBox(height: AppSpacing.md),
-                // Mockup: 2×2 quick-action tiles
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.05,
-                  children: [
-                    _ActionTile(
-                      title: 'Reply',
-                      subtitle: 'Upload a conversation.\nI\'ll tell you what to say.',
-                      icon: Icons.chat_bubble_outline_rounded,
-                      emphasized: true,
-                      onTap: () {
-                        controller.analytics.track('reply_started');
-                        context.push('/reply');
-                      },
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Screenshot a chat. Wingman writes a reply you can actually send.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      controller.analytics.track('reply_started');
+                      context.push('/reply');
+                    },
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    child: Ink(
+                      height: 168,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(AppRadius.xl),
+                        gradient: AppColors.accentGradient,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              color: AppColors.textInverse,
+                              size: 28,
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Help me reply',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(color: AppColors.textInverse),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Upload a screenshot',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: AppColors.textInverse
+                                        .withValues(alpha: 0.85),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    _ActionTile(
-                      title: 'Analyze',
-                      subtitle: 'What\'s actually happening?',
-                      icon: Icons.insights_outlined,
-                      onTap: () => context.push('/reply'),
-                    ),
-                    _ActionTile(
-                      title: 'Opener',
-                      subtitle: 'Start the conversation right.',
-                      icon: Icons.waving_hand_outlined,
-                      onTap: () => context.push('/opener'),
-                    ),
-                    _ActionTile(
-                      title: 'Profile',
-                      subtitle: 'Improve your dating profile.',
-                      icon: Icons.badge_outlined,
-                      onTap: () => context.push('/profile-audit'),
-                    ),
-                  ],
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.sectionGap),
                 WingmanSectionHeader(
                   title: 'Your people',
-                  actionLabel: 'See all',
-                  onAction: () => context.go('/people'),
+                  actionLabel: people.isEmpty ? null : 'See all',
+                  onAction:
+                      people.isEmpty ? null : () => context.go('/people'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 if (people.isEmpty)
                   const WingmanEmptyState(
                     title: 'No people yet.',
                     body:
-                        'Save a conversation and Wingman can remember useful context for you.',
+                        'After a reply, save the chat and Wingman will remember them here.',
                     icon: Icons.people_outline,
                   )
                 else
@@ -121,73 +138,6 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.onTap,
-    this.emphasized = false,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool emphasized;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: emphasized
-              ? AppColors.accent.withValues(alpha: 0.4)
-              : AppColors.borderSubtle,
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: emphasized
-                      ? AppColors.accentMuted
-                      : AppColors.surfaceHighlight,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: emphasized ? AppColors.accent : AppColors.textSecondary,
-                  size: 20,
-                ),
-              ),
-              const Spacer(),
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

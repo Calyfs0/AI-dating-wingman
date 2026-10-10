@@ -27,7 +27,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Wingman uses the camera so you can capture conversation screenshots for private coaching.</string>
+	<string>Wingman uses the camera so you can photograph a chat from another phone and get private reply suggestions.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Wingman uses the microphone for optional practice and date debrief voice input.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

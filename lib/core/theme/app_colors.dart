@@ -1,82 +1,87 @@
 import 'package:flutter/material.dart';
 
-/// Centralized Wingman color tokens matched to the product mockups.
-/// Near-black charcoal + restrained violet/lavender accent.
+/// Neon dating-assistant palette matching the Wingman mockup.
 abstract final class AppColors {
-  static const Color background = Color(0xFF000000);
-  static const Color backgroundElevated = Color(0xFF0C0C0F);
-  static const Color surface = Color(0xFF121216);
-  static const Color surfaceElevated = Color(0xFF1A1A20);
-  static const Color surfaceHighlight = Color(0xFF23232B);
-  static const Color border = Color(0xFF2C2C36);
-  static const Color borderSubtle = Color(0xFF1E1E26);
+  static const Color background = Color(0xFF07050C);
+  static const Color backgroundElevated = Color(0xFF100C18);
+  static const Color surface = Color(0xFF17121F);
+  static const Color surfaceElevated = Color(0xFF1F1829);
+  static const Color surfaceHighlight = Color(0xFF2A2136);
+  static const Color border = Color(0xFF3A2F4A);
+  static const Color borderSubtle = Color(0xFF2A2235);
 
-  static const Color accent = Color(0xFFB794F4);
-  static const Color accentSoft = Color(0xFFA78BFA);
-  static const Color accentMuted = Color(0x33B794F4);
-  static const Color accentDeep = Color(0xFF7C5CE0);
-  static const Color accentGlow = Color(0x66B794F4);
+  /// Neon pink primary.
+  static const Color accent = Color(0xFFFF4EAB);
+  static const Color accentSoft = Color(0xFFFF7AC2);
+  static const Color accentMuted = Color(0x33FF4EAB);
+  static const Color accentDeep = Color(0xFF8E44AD);
+  static const Color accentGlow = Color(0x66FF4EAB);
 
-  static const Color textPrimary = Color(0xFFF7F7F8);
-  static const Color textSecondary = Color(0xFFA0A0AB);
-  static const Color textTertiary = Color(0xFF6E6E78);
-  static const Color textInverse = Color(0xFF0B0B0D);
+  static const Color neonPink = Color(0xFFFF4EAB);
+  static const Color neonPurple = Color(0xFF8E44AD);
+  static const Color glass = Color(0x14FFFFFF);
+  static const Color glassBorder = Color(0x33FF4EAB);
 
-  static const Color success = Color(0xFF5FCB9A);
-  static const Color successMuted = Color(0x335FCB9A);
-  static const Color warning = Color(0xFFE8A54B);
-  static const Color warningMuted = Color(0x33E8A54B);
-  static const Color danger = Color(0xFFE57373);
-  static const Color dangerMuted = Color(0x33E57373);
-  static const Color info = Color(0xFF6BA4E8);
+  static const Color natural = Color(0xFF6FCF97);
+  static const Color playful = Color(0xFFFF4EAB);
+  static const Color confident = Color(0xFFF2C94C);
 
-  static const Color statusActive = Color(0xFF5FCB9A);
-  static const Color statusWaiting = Color(0xFFE8A54B);
-  static const Color statusQuiet = Color(0xFF6E6E78);
+  static const Color textPrimary = Color(0xFFF7F2FA);
+  static const Color textSecondary = Color(0xFFB9AEC8);
+  static const Color textTertiary = Color(0xFF7E738F);
+  static const Color textInverse = Color(0xFFFFF7FB);
 
-  static const Color shimmerBase = Color(0xFF16161C);
-  static const Color shimmerHighlight = Color(0xFF24242E);
+  static const Color success = Color(0xFF6FCF97);
+  static const Color successMuted = Color(0x336FCF97);
+  static const Color warning = Color(0xFFF2C94C);
+  static const Color warningMuted = Color(0x33F2C94C);
+  static const Color danger = Color(0xFFFF6B8A);
+  static const Color dangerMuted = Color(0x33FF6B8A);
+  static const Color info = Color(0xFFC9A0FF);
 
-  static const Color overlay = Color(0xCC000000);
-  static const Color scrim = Color(0x99000000);
+  static const Color statusActive = Color(0xFF6FCF97);
+  static const Color statusWaiting = Color(0xFFF2C94C);
+  static const Color statusQuiet = Color(0xFF7E738F);
+
+  static const Color shimmerBase = Color(0xFF14101A);
+  static const Color shimmerHighlight = Color(0xFF241C30);
+
+  static const Color overlay = Color(0xCC07050C);
+  static const Color scrim = Color(0x9907050C);
 
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF0E0E12), background],
+    colors: [Color(0xFF1A1024), background],
   );
 
   static const LinearGradient accentGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFD4C1FF), accent, accentDeep],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFFFF4EAB), Color(0xFF8E44AD)],
   );
 
   static const LinearGradient logoGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFE9D5FF), Color(0xFFB794F4), Color(0xFF7C5CE0)],
+    colors: [Color(0xFFFF8AC8), neonPink, neonPurple],
   );
 
   static const LinearGradient cardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF18181F), Color(0xFF111116)],
+    colors: [Color(0xCC1A1324), Color(0xAA0D0A14)],
   );
 
-  static const LinearGradient fabGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFD4C1FF), accent],
-  );
+  static const LinearGradient fabGradient = accentGradient;
 
   static const LinearGradient heroAtmosphere = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: [
-      Color(0xFF2A1F3D),
-      Color(0xFF141018),
-      Color(0xFF000000),
+      Color(0x66241438),
+      Color(0xCC0A0612),
+      Color(0xF207050C),
     ],
   );
 }

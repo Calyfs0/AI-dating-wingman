@@ -46,9 +46,7 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
         maxWidth: 1280,
       );
       if (files.isEmpty) return;
-      setState(() {
-        _images.addAll(files.take(8 - _images.length));
-      });
+      setState(() => _images.addAll(files.take(8 - _images.length)));
     } else {
       final file = await picker.pickImage(
         source: source,
@@ -93,7 +91,7 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Upload screenshots of the chat. Wingman reads them with AI.',
+            'Upload screenshots. Wingman writes the best next message.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -119,7 +117,7 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
           const SizedBox(height: AppSpacing.sm),
           WingmanFeatureCard(
             title: 'Paste text instead',
-            subtitle: 'Optional fallback if screenshots are blurry',
+            subtitle: 'Optional fallback',
             icon: Icons.content_paste_rounded,
             onTap: () => setState(() => _showPaste = !_showPaste),
           ),
@@ -137,7 +135,6 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
               maxLines: 8,
               minLines: 5,
               keyboardType: TextInputType.multiline,
-              textInputAction: TextInputAction.newline,
               enableInteractiveSelection: true,
               style: Theme.of(context).textTheme.bodyLarge,
               decoration: const InputDecoration(
@@ -175,11 +172,7 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
                           child: const CircleAvatar(
                             radius: 12,
                             backgroundColor: AppColors.surface,
-                            child: Icon(
-                              Icons.close,
-                              size: 14,
-                              color: AppColors.textPrimary,
-                            ),
+                            child: Icon(Icons.close, size: 14),
                           ),
                         ),
                       ),
@@ -191,7 +184,7 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
           ],
           const SizedBox(height: AppSpacing.xxl),
           WingmanButton(
-            label: 'Analyze conversation',
+            label: 'Get my reply',
             onPressed: !_hasInput
                 ? null
                 : () {
@@ -254,7 +247,15 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
         setState(() => _failed = true);
         return;
       }
-      context.go('/reply/analysis');
+      setState(() => _stage = ProcessingStage.building);
+      final generation =
+          await controller.generateResponse(ResponseTone.natural);
+      if (!mounted) return;
+      if (generation == null) {
+        setState(() => _failed = true);
+        return;
+      }
+      context.go('/reply/result');
     } catch (_) {
       if (mounted) setState(() => _failed = true);
     }
@@ -266,7 +267,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
       final message = context.read<AppController>().errorMessage;
       return WingmanScaffold(
         body: WingmanErrorState(
-          title: 'Couldn\'t finish this analysis.',
+          title: 'Couldn\'t finish.',
           body: message ??
               'Try a clearer screenshot, or paste the text as a fallback.',
           primaryLabel: 'Try again',
@@ -289,7 +290,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
       ProcessingStage.analyzing,
       ProcessingStage.building,
     ];
-
     final stageIndex = stages.indexOf(_stage).clamp(0, stages.length - 1);
 
     return WingmanScaffold(
@@ -298,7 +298,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
         children: [
           const SizedBox(height: AppSpacing.xxl),
           Text(
-            'Reading the conversation…',
+            'Writing your reply…',
             style: Theme.of(context).textTheme.displaySmall,
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -306,6 +306,9 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
             final stage = stages[index];
             final done = index < stageIndex;
             final active = index == stageIndex;
+            final label = index == stages.length - 1
+                ? 'Crafting your message'
+                : stage.label;
             return Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.md),
               child: Row(
@@ -323,7 +326,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    stage.label,
+                    label,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: done || active
                               ? AppColors.textPrimary
@@ -343,403 +346,176 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
   }
 }
 
-// Re-export remaining reply flow screens from the previous file content below.
-// Keep analysis / next-move / response / interpret / review / save screens.
-
-class AnalysisOverviewScreen extends StatelessWidget {
-  const AnalysisOverviewScreen({super.key});
+/// Basic result: messages we read + one reply based only on those.
+class ReplyResultScreen extends StatefulWidget {
+  const ReplyResultScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final conversation = context.watch<AppController>().activeConversation;
-    if (conversation == null) {
-      return const WingmanScaffold(body: WingmanLoadingState());
+  State<ReplyResultScreen> createState() => _ReplyResultScreenState();
+}
+
+class _ReplyResultScreenState extends State<ReplyResultScreen> {
+  bool _busy = false;
+
+  Future<void> _withBusy(Future<void> Function() action) async {
+    setState(() => _busy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
-    final signals = conversation.interestSignals;
-    final strategy = conversation.recommendedStrategy;
-    final snippet = conversation.messages.take(3).map((m) => m.text).join('\n');
-
-    return WingmanScaffold(
-      leading: WingmanIconButton(
-        icon: Icons.arrow_back_ios_new_rounded,
-        onPressed: () => context.go('/reply'),
-      ),
-      body: ListView(
-        children: [
-          Text('Here\'s what\'s going on',
-              style: Theme.of(context).textTheme.displaySmall),
-          const SizedBox(height: AppSpacing.md),
-          if (snippet.isNotEmpty)
-            WingmanGlassCard(
-              child: Text(snippet, style: Theme.of(context).textTheme.bodyMedium),
-            ),
-          const SizedBox(height: AppSpacing.lg),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _SignalChip(label: 'Interest', value: signals.interest),
-              _SignalChip(label: 'Energy', value: signals.energy),
-              _SignalChip(label: 'Momentum', value: signals.momentum),
-              _SignalChip(label: 'Reciprocity', value: signals.reciprocity),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Text('Strategy', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: AppSpacing.sm),
-          Text(strategy.read, style: Theme.of(context).textTheme.bodyLarge),
-          const SizedBox(height: AppSpacing.md),
-          Text('Do', style: Theme.of(context).textTheme.titleMedium),
-          ...strategy.dos.map((e) => _Bullet(e)),
-          const SizedBox(height: AppSpacing.sm),
-          Text("Don't", style: Theme.of(context).textTheme.titleMedium),
-          ...strategy.donts.map((e) => _Bullet(e)),
-          const SizedBox(height: AppSpacing.xxl),
-          WingmanButton(
-            label: 'Choose next move',
-            onPressed: () => context.push('/reply/next-move'),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-        ],
-      ),
-    );
   }
-}
-
-class _SignalChip extends StatelessWidget {
-  const _SignalChip({required this.label, required this.value});
-  final String label;
-  final double value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 150,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelMedium),
-          const SizedBox(height: 6),
-          Text(
-            '${(value * 100).round()}%',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Bullet extends StatelessWidget {
-  const _Bullet(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('•  '),
-          Expanded(child: Text(text)),
-        ],
-      ),
-    );
-  }
-}
-
-class NextMoveScreen extends StatelessWidget {
-  const NextMoveScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = context.watch<AppController>();
-    final strategy = controller.activeConversation?.recommendedStrategy;
-
-    return WingmanScaffold(
-      leading: WingmanIconButton(
-        icon: Icons.arrow_back_ios_new_rounded,
-        onPressed: () => context.pop(),
-      ),
-      body: ListView(
-        children: [
-          Text('Pick a tone', style: Theme.of(context).textTheme.displaySmall),
-          const SizedBox(height: AppSpacing.sm),
-          if (strategy != null)
-            Text(strategy.read, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: AppSpacing.xl),
-          ...ResponseTone.values.map((tone) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: WingmanFeatureCard(
-                title: tone.title,
-                subtitle: tone.subtitle,
-                icon: Icons.chat_bubble_outline,
-                onTap: () async {
-                  final generation = await controller.generateResponse(tone);
-                  if (!context.mounted) return;
-                  if (generation == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          controller.errorMessage ??
-                              'Couldn\'t generate a reply.',
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-                  context.push('/reply/response');
-                },
-              ),
-            );
-          }),
-          const SizedBox(height: AppSpacing.xl),
-        ],
-      ),
-    );
-  }
-}
-
-class ResponseDetailScreen extends StatelessWidget {
-  const ResponseDetailScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<AppController>();
     final generation = controller.activeGeneration;
+    final conversation = controller.activeConversation;
+    final messages = conversation?.messages ?? const [];
+
     if (generation == null) {
-      return const WingmanScaffold(body: WingmanLoadingState());
+      return WingmanScaffold(
+        leading: WingmanIconButton(
+          icon: Icons.arrow_back_ios_new_rounded,
+          onPressed: () => context.go('/home'),
+        ),
+        body: WingmanEmptyState(
+          title: 'No reply yet.',
+          body: 'Upload a chat screenshot to get a reply.',
+          actionLabel: 'Help me reply',
+          onAction: () => context.go('/reply'),
+        ),
+      );
     }
 
     return WingmanScaffold(
       leading: WingmanIconButton(
         icon: Icons.arrow_back_ios_new_rounded,
-        onPressed: () => context.pop(),
+        onPressed: () => context.go('/home'),
       ),
       body: ListView(
         children: [
-          Text('Your reply', style: Theme.of(context).textTheme.displaySmall),
-          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Send this',
+            style: Theme.of(context).textTheme.displaySmall,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Based only on the messages in your screenshot.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.xl),
           WingmanGlassCard(
             child: SelectableText(
               generation.text,
-              style: Theme.of(context).textTheme.bodyLarge,
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
           ),
-          if (generation.whyItWorks != null) ...[
+          if (_busy) ...[
             const SizedBox(height: AppSpacing.md),
-            Text('Why it works',
-                style: Theme.of(context).textTheme.titleMedium),
-            Text(generation.whyItWorks!,
-                style: Theme.of(context).textTheme.bodyMedium),
+            const LinearProgressIndicator(),
           ],
-          if (generation.alternatives.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.lg),
-            Text('Alternatives',
-                style: Theme.of(context).textTheme.titleMedium),
-            ...generation.alternatives.map(
-              (alt) => Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: WingmanGlassCard(
-                  child: SelectableText(alt),
-                ),
-              ),
+          const SizedBox(height: AppSpacing.lg),
+          WingmanButton(
+            label: 'Copy reply',
+            onPressed: _busy
+                ? null
+                : () async {
+                    await Clipboard.setData(
+                      ClipboardData(text: generation.text),
+                    );
+                    await controller.trackCopy();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Copied. Send it when you\'re ready.'),
+                        ),
+                      );
+                    }
+                  },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          WingmanSecondaryButton(
+            label: 'Try another',
+            onPressed: _busy
+                ? null
+                : () => _withBusy(() async {
+                      await controller.regenerate(
+                        'different reply, still only from these messages',
+                      );
+                    }),
+          ),
+          if (messages.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xxl),
+            Text(
+              'Messages we read',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'If this looks wrong, go back and use a clearer screenshot.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ...messages.map((message) {
+              final isUser = message.speaker.name == 'user';
+              final label = switch (message.speaker.name) {
+                'user' => 'You',
+                'other' => conversation?.personName ?? 'Them',
+                _ => '?',
+              };
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Align(
+                  alignment:
+                      isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.sizeOf(context).width * 0.78,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isUser
+                            ? AppColors.accentMuted
+                            : AppColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            label,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(color: AppColors.textTertiary),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(message.text),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
           ],
           const SizedBox(height: AppSpacing.xl),
-          WingmanButton(
-            label: 'Copy',
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: generation.text));
-              await controller.trackCopy();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Copied. Send it yourself when ready.'),
-                  ),
-                );
-              }
-            },
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          WingmanSecondaryButton(
-            label: 'Make it sound like me',
-            onPressed: () => controller.humanizeActive(),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          WingmanSecondaryButton(
-            label: 'Regenerate',
-            onPressed: () => controller.regenerate('fresher take'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
           WingmanSecondaryButton(
             label: 'Save to a person',
             onPressed: () => context.push('/reply/save'),
           ),
+          const SizedBox(height: AppSpacing.sm),
+          WingmanSecondaryButton(
+            label: 'Done',
+            onPressed: () => context.go('/home'),
+          ),
           const SizedBox(height: AppSpacing.xl),
-        ],
-      ),
-    );
-  }
-}
-
-class InterpretMessageScreen extends StatefulWidget {
-  const InterpretMessageScreen({super.key});
-
-  @override
-  State<InterpretMessageScreen> createState() => _InterpretMessageScreenState();
-}
-
-class _InterpretMessageScreenState extends State<InterpretMessageScreen> {
-  final _controller = TextEditingController();
-  String? _interpretation;
-  String? _guidance;
-  bool _loading = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _run() async {
-    setState(() => _loading = true);
-    final result = await context
-        .read<AppController>()
-        .analysisService
-        .interpretMessage(_controller.text.trim());
-    if (!mounted) return;
-    setState(() {
-      _interpretation = result.interpretation;
-      _guidance = result.guidance;
-      _loading = false;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return WingmanScaffold(
-      leading: WingmanIconButton(
-        icon: Icons.arrow_back_ios_new_rounded,
-        onPressed: () => context.pop(),
-      ),
-      body: ListView(
-        children: [
-          Text('Interpret a message',
-              style: Theme.of(context).textTheme.displaySmall),
-          const SizedBox(height: AppSpacing.lg),
-          WingmanTextField(
-            controller: _controller,
-            hint: 'Paste their message',
-            maxLines: 5,
-            minLines: 3,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          WingmanButton(
-            label: _loading ? 'Reading…' : 'Interpret',
-            onPressed: _loading || _controller.text.trim().isEmpty ? null : _run,
-          ),
-          if (_interpretation != null) ...[
-            const SizedBox(height: AppSpacing.xl),
-            Text(_interpretation!,
-                style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: AppSpacing.sm),
-            Text(_guidance ?? '',
-                style: Theme.of(context).textTheme.bodyMedium),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class ReviewBeforeSendScreen extends StatefulWidget {
-  const ReviewBeforeSendScreen({super.key});
-
-  @override
-  State<ReviewBeforeSendScreen> createState() => _ReviewBeforeSendScreenState();
-}
-
-class _ReviewBeforeSendScreenState extends State<ReviewBeforeSendScreen> {
-  final _controller = TextEditingController();
-  String? _verdict;
-  String? _why;
-  String? _better;
-  double? _score;
-  bool _loading = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _review() async {
-    setState(() => _loading = true);
-    final result = await context
-        .read<AppController>()
-        .analysisService
-        .reviewBeforeSend(_controller.text.trim());
-    if (!mounted) return;
-    setState(() {
-      _verdict = result.verdict;
-      _why = result.why;
-      _better = result.better;
-      _score = result.sendWorthiness;
-      _loading = false;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return WingmanScaffold(
-      leading: WingmanIconButton(
-        icon: Icons.arrow_back_ios_new_rounded,
-        onPressed: () => context.pop(),
-      ),
-      body: ListView(
-        children: [
-          Text('Review before send',
-              style: Theme.of(context).textTheme.displaySmall),
-          const SizedBox(height: AppSpacing.lg),
-          WingmanTextField(
-            controller: _controller,
-            hint: 'Your draft…',
-            maxLines: 6,
-            minLines: 4,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          WingmanButton(
-            label: _loading ? 'Reviewing…' : 'Review',
-            onPressed: _loading || _controller.text.trim().isEmpty ? null : _review,
-          ),
-          if (_verdict != null) ...[
-            const SizedBox(height: AppSpacing.xl),
-            Text(_verdict!, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: AppSpacing.sm),
-            Text(_why ?? '', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: AppSpacing.md),
-            WingmanGlassCard(
-              child: Text(_better ?? '',
-                  style: Theme.of(context).textTheme.bodyLarge),
-            ),
-            if (_score != null)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.md),
-                child: Text(
-                  'Send-worthy ${_score!.toStringAsFixed(1)} / 10',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-          ],
         ],
       ),
     );
@@ -793,7 +569,7 @@ class _SaveToPersonScreenState extends State<SaveToPersonScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Wingman only remembers people you explicitly save.',
+            'So you can reopen the chat and context later.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -820,17 +596,7 @@ class _SaveToPersonScreenState extends State<SaveToPersonScreen> {
                         color: selected ? AppColors.accent : AppColors.border,
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(person.name,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        Text(
-                          person.latestContext ?? person.platform,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
+                    child: Text(person.name),
                   ),
                 ),
               );
@@ -861,10 +627,8 @@ class _SaveToPersonScreenState extends State<SaveToPersonScreen> {
                       final matches = selectedId == null
                           ? const <Never>[]
                           : people.where((p) => p.id == selectedId).toList();
-                      final selected =
-                          matches.isEmpty ? null : matches.first;
                       final person = await controller.saveConversationToPerson(
-                        person: selected,
+                        person: matches.isEmpty ? null : matches.first,
                         name: _nameController.text.trim().isEmpty
                             ? nameHint
                             : _nameController.text.trim(),
@@ -879,7 +643,7 @@ class _SaveToPersonScreenState extends State<SaveToPersonScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
           WingmanSecondaryButton(
-            label: 'Don\'t save',
+            label: 'Skip',
             onPressed: () => context.go('/home'),
           ),
           const SizedBox(height: AppSpacing.lg),

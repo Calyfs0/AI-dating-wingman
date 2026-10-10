@@ -61,22 +61,32 @@ class _WingmanButtonState extends State<WingmanButton> {
                         height: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.2,
-                          color: AppColors.textInverse,
+                          color: AppColors.champagne,
                         ),
                       )
                     : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (widget.icon != null) ...[
-                            Icon(widget.icon, color: AppColors.textInverse, size: 20),
+                            Icon(
+                              widget.icon,
+                              color: enabled
+                                  ? AppColors.champagne
+                                  : AppColors.textTertiary,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                           ],
                           Text(
                             widget.label,
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
                                   color: enabled
-                                      ? AppColors.textInverse
+                                      ? AppColors.champagne
                                       : AppColors.textTertiary,
+                                  letterSpacing: 0.4,
                                 ),
                           ),
                         ],
@@ -110,8 +120,8 @@ class WingmanSecondaryButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.textPrimary,
-          side: const BorderSide(color: AppColors.border),
+          foregroundColor: AppColors.blush,
+          side: BorderSide(color: AppColors.accent.withValues(alpha: 0.45)),
           shape: const StadiumBorder(),
           textStyle: Theme.of(context).textTheme.labelLarge,
         ),
@@ -172,7 +182,7 @@ class WingmanTextButton extends StatelessWidget {
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        foregroundColor: AppColors.textSecondary,
+        foregroundColor: AppColors.accentSoft,
         minimumSize: const Size(44, 44),
         textStyle: Theme.of(context).textTheme.labelLarge,
       ),

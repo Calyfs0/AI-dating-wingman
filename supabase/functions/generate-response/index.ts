@@ -2,6 +2,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 import { chatJson } from "../_shared/openai.ts";
 
+const QUALITY_RULES = `You write the next message the USER should send.
+STRICT RULES:
+- Use ONLY the messages provided. Do not invent prior topics, plans, coffee, travel, or anything not in those messages.
+- If messages are empty, return text explaining you need a chat screenshot (do not invent a chat).
+- Sound like a real person texting: short, natural, 1–2 sentences.
+- Reference something concrete that appears in the provided messages.
+- Never cheesy pickup lines. Never mention Wingman or AI.
+Return JSON only: {"text": string, "alternatives": string[2], "why_it_works": string, "send_worthiness": number 0-10}.`;
+
+function messagesOnly(structured: Record<string, unknown>): unknown[] {
+  return Array.isArray(structured.messages) ? structured.messages : [];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -30,7 +43,6 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const mode = String(body.mode ?? "generate");
     const tone = String(body.tone ?? "natural");
-    const style = body.style ?? {};
     const direction = String(body.direction ?? "");
     let structured = body.structured as Record<string, unknown> | null;
 
@@ -54,28 +66,32 @@ Deno.serve(async (req) => {
       );
     }
 
-    const priorText = String(body.priorText ?? "");
-    const conversationBlob = JSON.stringify(structured);
+    const messages = messagesOnly(structured);
+    if (messages.length === 0) {
+      return jsonResponse(
+        {
+          error:
+            "No chat messages found. Upload a conversation screenshot first.",
+          code: "validation",
+        },
+        400,
+      );
+    }
 
-    let system =
-      "You are Wingman, a private AI dating coach. Write replies the USER can send themselves. Never claim you sent the message. Return JSON only.";
+    const priorText = String(body.priorText ?? "");
+    const messagesBlob = JSON.stringify(messages);
+    const system = `You are Wingman. ${QUALITY_RULES}`;
     let userPrompt = "";
 
     if (mode === "humanize") {
-      system +=
-        " Return {\"text\": string, \"alternatives\": string[2], \"why_it_works\": string, \"send_worthiness\": number}. Soften robotic wording; keep meaning.";
       userPrompt =
-        `Tone: ${tone}\nStyle: ${JSON.stringify(style)}\nConversation: ${conversationBlob}\nCurrent draft:\n${priorText}\nMake it sound more human and like the user.`;
+        `Tone: natural\nMessages only:\n${messagesBlob}\nCurrent draft:\n${priorText}\nRewrite more naturally. Still only use facts from these messages.`;
     } else if (mode === "regenerate") {
-      system +=
-        " Return {\"text\": string, \"alternatives\": string[2], \"why_it_works\": string, \"send_worthiness\": number}.";
       userPrompt =
-        `Tone: ${tone}\nStyle: ${JSON.stringify(style)}\nDirection: ${direction || "fresh take"}\nConversation: ${conversationBlob}\nPrevious reply:\n${priorText}\nRegenerate a better reply.`;
+        `Tone: ${tone}\nDirection: ${direction || "different but still grounded"}\nMessages only:\n${messagesBlob}\nPrevious reply:\n${priorText}\nWrite another reply based only on these messages.`;
     } else {
-      system +=
-        ` Write in a ${tone} tone. Return JSON: {"text": string, "alternatives": string[2], "why_it_works": string, "send_worthiness": number 0-10}. Match the user's likely voice from style when tone is yourStyle.`;
       userPrompt =
-        `Tone: ${tone}\nCommunication style: ${JSON.stringify(style)}\nConversation JSON:\n${conversationBlob}\nSuggest the next message the user should send.`;
+        `Tone: ${tone}\nMessages only (speaker user = me, other = them):\n${messagesBlob}\nWrite the best next message for me to send, based only on these messages.`;
     }
 
     const ai = await chatJson({ system, user: userPrompt });

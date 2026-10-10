@@ -71,29 +71,9 @@ GoRouter createAppRouter(AppController controller) {
                       personId: state.pathParameters['id']!,
                     ),
                     routes: [
-                      GoRoute(
-                        path: 'prepare',
-                        builder: (_, state) => DatePreparationScreen(
-                          personId: state.pathParameters['id']!,
-                        ),
-                      ),
-                      GoRoute(
-                        path: 'debrief',
-                        builder: (_, state) => DateDebriefScreen(
-                          personId: state.pathParameters['id']!,
-                        ),
-                      ),
                     ],
                   ),
                 ],
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/practice',
-                builder: (_, __) => const PracticeHomeScreen(),
               ),
             ],
           ),
@@ -124,24 +104,8 @@ GoRouter createAppRouter(AppController controller) {
             },
           ),
           GoRoute(
-            path: 'analysis',
-            builder: (_, __) => const AnalysisOverviewScreen(),
-          ),
-          GoRoute(
-            path: 'next-move',
-            builder: (_, __) => const NextMoveScreen(),
-          ),
-          GoRoute(
-            path: 'response',
-            builder: (_, __) => const ResponseDetailScreen(),
-          ),
-          GoRoute(
-            path: 'interpret',
-            builder: (_, __) => const InterpretMessageScreen(),
-          ),
-          GoRoute(
-            path: 'review',
-            builder: (_, __) => const ReviewBeforeSendScreen(),
+            path: 'result',
+            builder: (_, __) => const ReplyResultScreen(),
           ),
           GoRoute(
             path: 'save',

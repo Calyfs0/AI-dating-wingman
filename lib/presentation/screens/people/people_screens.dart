@@ -250,17 +250,7 @@ class _PersonProfileScreenState extends State<PersonProfileScreen> {
           if (_tab == 2) ..._notesTab(context),
           const SizedBox(height: AppSpacing.xl),
           WingmanButton(
-            label: 'Prepare me',
-            onPressed: () => context.push('/people/${person.id}/prepare'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          WingmanSecondaryButton(
-            label: 'Debrief',
-            onPressed: () => context.push('/people/${person.id}/debrief'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          WingmanSecondaryButton(
-            label: 'Analyze new conversation',
+            label: 'Analyze new chat',
             onPressed: () => context.push('/reply'),
           ),
           const SizedBox(height: AppSpacing.xl),

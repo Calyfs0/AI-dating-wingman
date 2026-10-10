@@ -50,6 +50,11 @@ class SupabaseConversationAnalysisService implements ConversationAnalysisService
   Conversation? _cached;
   List<String> lastKeyFacts = const [];
 
+  void clearCache() {
+    _cached = null;
+    lastKeyFacts = const [];
+  }
+
   @override
   Stream<ProcessingStage> analyzeProgress({
     List<String> imagePaths = const [],

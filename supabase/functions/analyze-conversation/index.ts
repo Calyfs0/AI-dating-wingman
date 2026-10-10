@@ -118,13 +118,22 @@ Deno.serve(async (req) => {
 
     const system = `You are Wingman, a premium private AI dating coach.
 You receive dating-app chat screenshots and/or pasted text from the USER's phone.
-Read every visible message carefully. Do not invent messages that are not visible.
+
+CRITICAL — chat detection:
+- A valid chat shows message bubbles / text threads between people (iMessage, WhatsApp, Hinge, Bumble, Tinder, Instagram DM, etc.).
+- Photos of shoes, outfits, selfies, food, landscapes, or profile grids WITHOUT readable chat messages are NOT chats.
+- If the input is not a conversation, return ONLY:
+  {"is_chat": false, "error": "This doesn't look like a chat screenshot. Upload the conversation messages."}
+- NEVER invent a conversation. NEVER reuse coffee/travel demo topics. If you cannot read real messages, is_chat must be false.
+
+When it IS a chat, read every visible message carefully. Do not invent messages that are not visible.
 "user" = the app user seeking advice (usually messages on the right / "me").
 "other" = the match (usually left side).
 Use "unknown" only if speaker is unclear.
-Detect the dating app if visible (Hinge, Bumble, Tinder, iMessage, WhatsApp, etc.).
+Detect the dating app if visible.
 Return JSON with this exact shape:
 {
+  "is_chat": true,
   "person_name": string,
   "platform": string,
   "participants": string[],
@@ -138,14 +147,14 @@ Return JSON with this exact shape:
   "transcript": string
 }
 "transcript" should be a readable plain-text reconstruction of the chat (Them:/You: lines).
-Be specific to these screenshots/text. No generic demo filler.`;
+Be specific to these screenshots/text only.`;
 
     const userParts: ChatContentPart[] = [
       {
         type: "text",
         text: `Person name hint: ${personName}
 ${pastedText ? `\nOptional pasted text:\n${pastedText}\n` : ""}
-${images.length > 0 ? `There are ${images.length} screenshot(s). Read them in order (top to bottom of the chat).` : "No screenshots — use pasted text only."}`,
+${images.length > 0 ? `There are ${images.length} image(s). First decide if they show a chat conversation. If not, return is_chat:false. If yes, read messages in order.` : "No screenshots — use pasted text only."}`,
       },
       ...images.map((url) => ({
         type: "image_url" as const,
@@ -159,12 +168,42 @@ ${images.length > 0 ? `There are ${images.length} screenshot(s). Read them in or
       model: "gpt-4o-mini",
     });
 
+    if (ai.is_chat === false) {
+      return jsonResponse(
+        {
+          error: String(
+            ai.error ??
+              "This doesn't look like a chat screenshot. Upload the conversation messages.",
+          ),
+          code: "validation",
+        },
+        400,
+      );
+    }
+
+    const messages = Array.isArray(ai.messages) ? ai.messages : [];
+    const realMessages = messages.filter((m) => {
+      if (!m || typeof m !== "object") return false;
+      const text = String((m as { text?: unknown }).text ?? "").trim();
+      return text.length > 0;
+    });
+    if (realMessages.length === 0 && !pastedText) {
+      return jsonResponse(
+        {
+          error:
+            "Couldn't read any chat messages in that image. Upload a clearer conversation screenshot.",
+          code: "validation",
+        },
+        400,
+      );
+    }
+
     const transcript = String(ai.transcript ?? pastedText ?? "");
     const structured = {
       person_name: String(ai.person_name ?? personName),
       platform: String(ai.platform ?? "Unknown"),
       participants: Array.isArray(ai.participants) ? ai.participants : ["You", personName],
-      messages: Array.isArray(ai.messages) ? ai.messages : [],
+      messages: realMessages,
       topics: Array.isArray(ai.topics) ? ai.topics : [],
       conversation_state: String(ai.conversation_state ?? "active"),
       interest_signals: ai.interest_signals ?? {},

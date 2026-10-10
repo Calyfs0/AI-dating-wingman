@@ -126,10 +126,25 @@ class AppController extends ChangeNotifier {
     return person;
   }
 
+  void _clearActiveReply({bool notify = false}) {
+    activeConversation = null;
+    activeGeneration = null;
+    lastAnalysisKeyFacts = const [];
+    final analysis = _analysis;
+    if (analysis is SupabaseConversationAnalysisService) {
+      analysis.clearCache();
+    }
+    if (notify) {
+      // Never notify during build — GoRouter listens to this controller.
+      scheduleMicrotask(notifyListeners);
+    }
+  }
+
   Stream<ProcessingStage> processConversation({
     List<String> imagePaths = const [],
     String? pastedText,
   }) {
+    _clearActiveReply(notify: true);
     for (final path in imagePaths) {
       _privacy.markScreenshotTemporary(path);
     }

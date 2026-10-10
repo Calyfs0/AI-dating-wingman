@@ -55,8 +55,6 @@ class YouScreen extends StatelessWidget {
           _tile(context, 'Notifications', '/you/notifications'),
           _tile(context, 'Secure your account', '/you/account'),
           _tile(context, 'Subscription', '/you/subscription'),
-          _tile(context, 'Help & support', null),
-          _tile(context, 'About', null),
           const SizedBox(height: AppSpacing.xl),
           Text('Danger zone', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
