@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/suggested_replies.dart';
 
-/// Tone icons from design assets (leaf / flame / crown).
+/// Tone icons from design assets (leaf / flame).
 class ToneIcon extends StatelessWidget {
   const ToneIcon({super.key, required this.tone, this.size = 20});
 
@@ -12,7 +12,6 @@ class ToneIcon extends StatelessWidget {
   String get _asset => switch (tone) {
         ReplyTone.natural => 'assets/icons/icon_leaf.png',
         ReplyTone.playful => 'assets/icons/icon_flame.png',
-        ReplyTone.confident => 'assets/icons/icon_crown.png',
       };
 
   Widget _assetImage() {
@@ -24,7 +23,6 @@ class ToneIcon extends StatelessWidget {
         switch (tone) {
           ReplyTone.natural => Icons.eco_rounded,
           ReplyTone.playful => Icons.local_fire_department_rounded,
-          ReplyTone.confident => Icons.workspace_premium_rounded,
         },
         size: size * 0.7,
         color: tone.accentColor,
@@ -65,7 +63,6 @@ class ToneIcon extends StatelessWidget {
           alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
-            // Outer pink bloom
             _tintBloom(
               color: const Color(0xFFFF4EAB),
               scale: 1.2,
@@ -76,7 +73,6 @@ class ToneIcon extends StatelessWidget {
               scale: 1.1,
               opacity: 0.35,
             ),
-            // Inner yellow heat
             _tintBloom(
               color: const Color(0xFFFFDC50),
               scale: 0.95,
@@ -93,12 +89,10 @@ class ToneIcon extends StatelessWidget {
       );
     }
 
-    // Crown reads a bit large — nudge down to match leaf/flame.
-    final scale = tone == ReplyTone.confident ? 0.9 : 1.0;
     return SizedBox(
       width: size,
       height: size,
-      child: Transform.scale(scale: scale, child: _assetImage()),
+      child: _assetImage(),
     );
   }
 }

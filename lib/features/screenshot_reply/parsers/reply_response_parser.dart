@@ -53,11 +53,8 @@ class ReplyResponseParser {
     final replies = Map<String, dynamic>.from(repliesRaw);
     final natural = _requireReply(replies, 'natural');
     final playful = _requireReply(replies, 'playful');
-    final confident = _requireReply(replies, 'confident');
 
-    if (_tooSimilar(natural, playful) ||
-        _tooSimilar(natural, confident) ||
-        _tooSimilar(playful, confident)) {
+    if (_tooSimilar(natural, playful)) {
       throw const FormatException(
         "Couldn't generate distinct replies. Please try again.",
       );
@@ -68,7 +65,6 @@ class ReplyResponseParser {
       SuggestedReplies(
         natural: natural,
         playful: playful,
-        confident: confident,
         latestIncoming: latest?.isEmpty == true ? null : latest,
       ),
     );

@@ -167,10 +167,9 @@ function languageMismatch(
   source: string,
   natural: string,
   playful: string,
-  confident: string,
 ): boolean {
   const sourceScript = detectScript(source);
-  const replies = [natural, playful, confident];
+  const replies = [natural, playful];
   const replyScripts = replies.map(detectScript);
 
   if (sourceScript === "other") {
@@ -212,8 +211,8 @@ const FORMAL_ENGLISH_PATTERNS = [
   /with all due respect/i,
 ];
 
-function tooFormal(natural: string, playful: string, confident: string): boolean {
-  return [natural, playful, confident].some((reply) =>
+function tooFormal(natural: string, playful: string): boolean {
+  return [natural, playful].some((reply) =>
     FORMAL_ENGLISH_PATTERNS.some((re) => re.test(reply))
   );
 }
@@ -223,15 +222,14 @@ const SESSION_RULES = `Session isolation (critical):
 - Use only the screenshot / message / optional context provided in this request.
 - Never carry over language, names, tone, or details from any other conversation.`;
 
-const LANGUAGE_RULES = `Language match (critical — applies to natural, playful, AND confident equally):
+const LANGUAGE_RULES = `Language match (critical — applies to natural AND playful equally):
 - Detect the language of the latest incoming message, then match it exactly.
-- natural, playful, and confident MUST ALL be in that same language and script. No exceptions.
-- The "confident" reply is the one that most often wrongly switches to English — never do that.
-- Tamil (தமிழ்) in → all three replies in Tamil script.
-- Devanagari Hindi in → all three in Devanagari Hindi (not English, not Hinglish).
-- Romanized Hinglish in → all three in romanized Hinglish (e.g. "arey yaar soft ho ja", "sach? dil se?").
+- natural and playful MUST BOTH be in that same language and script. No exceptions.
+- Tamil (தமிழ்) in → both replies in Tamil script.
+- Devanagari Hindi in → both in Devanagari Hindi (not English, not Hinglish).
+- Romanized Hinglish in → both in romanized Hinglish (e.g. "arey yaar soft ho ja", "sach? dil se?").
   Do NOT rewrite Hinglish into polished English.
-- English in → all three in casual English (never Tamil/Hindi script, never forced Hinglish).
+- English in → both in casual English (never Tamil/Hindi script, never forced Hinglish).
 - Same rule for any other language/script the message uses.
 - Mixed chat: follow the latest incoming message only.
 - Optional context must not change the reply language.
@@ -247,19 +245,18 @@ const VOICE_RULES = `Voice — sound like a real text, never an email or therapi
 - Light slang / soft emoji only if it fits — never emoji spam.
 - Sound like someone they already know texting back.`;
 
-const EMPATHY_RULES = `Empathy first (required for ALL three replies) — keep it casual:
+const EMPATHY_RULES = `Empathy first (required for BOTH replies) — keep it casual:
 - Notice what they shared (hurt, stress, affection, excitement, etc.) and nod to it briefly.
 - Then add the tone flavor. Don't skip the human beat on heavy messages.
 - Empathy without inventing how the USER feels or mirroring "I love you" / "I feel the same"
   unless the USER already clearly said that.
 - You can care and acknowledge without claiming reciprocal romantic intensity.`;
 
-const TONE_RULES = `Tone requirements (must feel meaningfully different; ALL stay casual + empathetic + same language):
+const TONE_RULES = `Tone requirements (must feel meaningfully different; BOTH stay casual + empathetic + same language):
 - natural: Easy, warm, low-effort text — like a chill friend.
-- playful: Soft tease AFTER a small warm beat — never try-hard, never punching their feelings.
-- confident: Direct and calm in the SAME language as the others — short and steady, not an English speech.`;
+- playful: Soft tease AFTER a small warm beat — never try-hard, never punching their feelings.`;
 
-const SCREENSHOT_INSTRUCTIONS = `You are Wingman, a dating reply assistant that texts like a real person.
+const SCREENSHOT_INSTRUCTIONS = `You are Gotchu, a dating reply companion that texts like a real person.
 
 You receive ONE screenshot of a messaging conversation.
 Your job:
@@ -271,7 +268,7 @@ Your job:
 4. If that latest message is from the USER (they already replied, said goodnight, thanks, ok, etc.):
    Do NOT invent replies. Return needs_reply:false with a short warm title + message.
    Examples: closed with goodnight, already answered, ball is in their court.
-5. Only if the latest message is from the OTHER person: write exactly three distinct replies.
+5. Only if the latest message is from the OTHER person: write exactly two distinct replies.
 
 ${SESSION_RULES}
 
@@ -287,7 +284,7 @@ Hard rules:
 - Never invent conversation details that are not visible.
 - Avoid cheesy pickup lines, emoji spam, cold/detached one-liners, and robotic/formal phrasing.
 - Keep each reply concise (usually 1–2 short sentences), copy-paste ready.
-- The three replies must not be paraphrases of each other.
+- The two replies must not be paraphrases of each other.
 - If the image is not a readable chat, return readable:false with a short friendly error.
 
 Return JSON only — one of:
@@ -303,17 +300,57 @@ or {
   "needs_reply": true,
   "latest_incoming": "...",
   "language": "english|hinglish|hindi|tamil|other",
-  "replies": { "natural": "...", "playful": "...", "confident": "..." }
+  "replies": { "natural": "...", "playful": "..." }
 }
 or { "readable": false, "error": "..." }`;
 
-const TEXT_INSTRUCTIONS = `You are Wingman, a dating reply assistant that texts like a real person.
+const OPENERS_INSTRUCTIONS = `You are Gotchu, a dating opener companion that texts like a real person.
+
+You receive ONE screenshot of someone's dating profile (Hinge, Bumble, Tinder, etc.).
+Your job:
+1. Read visible name, prompts, bio, interests, and photo captions carefully.
+2. Pick real hooks from what is visible — never invent hobbies or details.
+3. Write exactly two distinct first messages the USER can send this person.
+
+${SESSION_RULES}
+
+Language:
+- Match the dominant language/script of the profile text (bio/prompts).
+- If the profile is mostly English, write English openers.
+- Hindi/Tamil/Hinglish profiles → openers in that same language/script.
+- natural and playful MUST BOTH be in that same language.
+
+Voice — sound like a real first text, never a pickup-line generator:
+- Short, casual, specific to a visible hook.
+- Prefer 1–2 short lines. Reference something concrete from the profile.
+- Avoid generic "hey beautiful", emoji spam, and try-hard rizz.
+- Empathy/warmth first when a prompt is personal; playful tease only after a human beat.
+
+Tone requirements (must feel meaningfully different):
+- natural: Easy, warm first message grounded in a real hook.
+- playful: Soft tease tied to a specific prompt — never mean.
+
+Hard rules:
+- Never invent profile details that are not visible.
+- The two openers must not be paraphrases of each other.
+- If the image is not a readable dating profile, return readable:false with a short friendly error.
+
+Return JSON only:
+{
+  "readable": true,
+  "latest_incoming": "short summary of the main hook you used",
+  "language": "english|hinglish|hindi|tamil|other",
+  "replies": { "natural": "...", "playful": "..." }
+}
+or { "readable": false, "error": "..." }`;
+
+const TEXT_INSTRUCTIONS = `You are Gotchu, a dating reply companion that texts like a real person.
 
 The user pastes the latest message they received (from the other person), with optional context.
 Your job:
 1. Treat "message" as the latest incoming message to reply to.
 2. Use optional context only if provided — do not invent missing details.
-3. Write exactly three distinct, ready-to-send reply messages.
+3. Write exactly two distinct, ready-to-send reply messages.
 
 ${SESSION_RULES}
 
@@ -329,7 +366,7 @@ Hard rules:
 - Never invent conversation history that was not provided.
 - Avoid cheesy pickup lines, emoji spam, cold/detached one-liners, and robotic/formal phrasing.
 - Keep each reply concise (usually 1–2 short sentences), copy-paste ready.
-- The three replies must not be paraphrases of each other.
+- The two replies must not be paraphrases of each other.
 - If the message is empty or unusable, return readable:false with a short friendly error.
 
 Return JSON only:
@@ -337,13 +374,14 @@ Return JSON only:
   "readable": true,
   "latest_incoming": "...",
   "language": "english|hinglish|hindi|tamil|other",
-  "replies": { "natural": "...", "playful": "...", "confident": "..." }
+  "replies": { "natural": "...", "playful": "..." }
 }
 or { "readable": false, "error": "..." }`;
 
 function validateReplies(
   ai: Record<string, unknown>,
   languageSource: string,
+  options: { skipLanguageCheck?: boolean } = {},
 ) {
   if (ai.readable === false) {
     const message = String(
@@ -383,9 +421,8 @@ function validateReplies(
   const replies = repliesRaw as Record<string, unknown>;
   const natural = String(replies.natural ?? "").trim();
   const playful = String(replies.playful ?? "").trim();
-  const confident = String(replies.confident ?? "").trim();
 
-  if (!natural || !playful || !confident) {
+  if (!natural || !playful) {
     return {
       ok: false as const,
       status: 502,
@@ -393,11 +430,7 @@ function validateReplies(
     };
   }
 
-  if (
-    tooSimilar(natural, playful) ||
-    tooSimilar(natural, confident) ||
-    tooSimilar(playful, confident)
-  ) {
+  if (tooSimilar(natural, playful)) {
     return {
       ok: false as const,
       status: 502,
@@ -413,7 +446,10 @@ function validateReplies(
     languageSource.trim() ||
     null;
   const mismatchSource = languageSource.trim() || latestIncoming || "";
-  if (languageMismatch(mismatchSource, natural, playful, confident)) {
+  if (
+    !options.skipLanguageCheck &&
+    languageMismatch(mismatchSource, natural, playful)
+  ) {
     return {
       ok: false as const,
       status: 502,
@@ -425,7 +461,7 @@ function validateReplies(
     };
   }
 
-  if (tooFormal(natural, playful, confident)) {
+  if (tooFormal(natural, playful)) {
     return {
       ok: false as const,
       status: 502,
@@ -442,27 +478,27 @@ function validateReplies(
     body: {
       readable: true,
       latestIncoming,
-      replies: { natural, playful, confident },
+      replies: { natural, playful },
     },
   };
 }
 
 const LANGUAGE_RETRY_HINT =
-  "RETRY: At least one reply was in the wrong language/script (often confident). " +
-  "Rewrite natural, playful, AND confident — all three — in the exact same language/script as the latest incoming message. " +
+  "RETRY: At least one reply was in the wrong language/script. " +
+  "Rewrite natural AND playful — both — in the exact same language/script as the latest incoming message. " +
   "Tamil→Tamil, Hindi→Hindi, English→English, etc. Do not switch any reply to English.";
 
 const DISTINCT_RETRY_HINT =
-  "RETRY: Your three replies were too similar. Rewrite natural, playful, and confident so each feels clearly different " +
+  "RETRY: Your two replies were too similar. Rewrite natural and playful so each feels clearly different " +
   "in wording and vibe, still in the same language/script as the latest incoming message.";
 
 const FORMAL_RETRY_HINT =
-  "RETRY: Replies sounded too formal/therapy-like. Rewrite all three as casual texts a real person would send. " +
+  "RETRY: Replies sounded too formal/therapy-like. Rewrite both as casual texts a real person would send. " +
   "No 'I can see that', 'I respect your space', 'I'd like to', or essay phrasing.";
 
 const HINGLISH_RETRY_HINT =
-  "RETRY: The incoming message is Hinglish (romanized Hindi mix). All three replies must be Hinglish too — " +
-  "not polished English. Example vibe: 'arey soft hoja 😅' / 'sach? dil se bol raha?' / 'ok sun — calm hoja, baat karte hain'.";
+  "RETRY: The incoming message is Hinglish (romanized Hindi mix). Both replies must be Hinglish too — " +
+  "not polished English. Example vibe: 'arey soft hoja 😅' / 'sach? dil se bol raha?'.";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -491,6 +527,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const image = normalizeImageDataUrl(String(body.image ?? ""));
+    const mode = String(body.mode ?? "").trim().toLowerCase();
+    const isOpeners = mode === "openers";
     const message = String(body.message ?? "").trim().slice(0, MAX_MESSAGE_CHARS);
     // Drop optional context when its script disagrees with the message —
     // prevents a leftover context language from steering a new chat.
@@ -511,8 +549,28 @@ Deno.serve(async (req) => {
     let baseUserText: string;
     let instructions: string;
     let imageDataUrl: string | undefined;
+    let skipLanguageCheck = false;
 
-    if (image) {
+    if (isOpeners) {
+      if (!image) {
+        return jsonResponse(
+          {
+            error: "Choose a profile screenshot to continue.",
+            code: "validation",
+          },
+          400,
+        );
+      }
+      // Image processed in-memory only — never stored.
+      instructions = OPENERS_INSTRUCTIONS;
+      imageDataUrl = image;
+      skipLanguageCheck = true;
+      baseUserText =
+        "This is a brand-new isolated request — ignore any notion of prior chats. " +
+        "Analyze this dating profile screenshot. Extract real hooks from bio/prompts/interests. " +
+        "Write two distinct casual first messages (natural, playful) in the profile's language. " +
+        "Never invent details. Return the JSON object from your instructions.";
+    } else if (image) {
       // Image processed in-memory only — never stored.
       instructions = SCREENSHOT_INSTRUCTIONS;
       imageDataUrl = image;
@@ -520,21 +578,21 @@ Deno.serve(async (req) => {
         ? "This is a brand-new isolated request — ignore any notion of prior chats. " +
           "Analyze this chat screenshot for conversation context, but treat this as the latest incoming message to reply to:\n" +
           `${message}\n\n` +
-          "Match language/script for ALL three replies including confident to that latest message " +
+          "Match language/script for BOTH replies (natural and playful) to that latest message " +
           "(Tamil→Tamil, Hindi→Hindi, Hinglish→Hinglish, English→English, or any other language as written). " +
           "Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. " +
           "Return the JSON object from your instructions. Set latest_incoming to the provided latest message."
         : "This is a brand-new isolated request — ignore any notion of prior chats. " +
           "Analyze this chat screenshot. Focus on the latest incoming message and visible prior context. " +
-          "Match language/script for ALL three replies including confident " +
+          "Match language/script for BOTH replies (natural and playful) " +
           "(Tamil→Tamil, Hindi→Hindi, Hinglish→Hinglish, English→English, or any other language as written). " +
           "Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. " +
           "Return the JSON object from your instructions.";
     } else if (message) {
       instructions = TEXT_INSTRUCTIONS;
       baseUserText = context
-        ? `This is a brand-new isolated request — ignore any notion of prior chats.\n\nLatest incoming message:\n${message}\n\nOptional context from the user:\n${context}\n\nMatch language/script for ALL three replies including confident (Tamil→Tamil, Hindi→Hindi, English→English, or any other language as written). Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. Return the JSON object from your instructions.`
-        : `This is a brand-new isolated request — ignore any notion of prior chats.\n\nLatest incoming message:\n${message}\n\nMatch language/script for ALL three replies including confident (Tamil→Tamil, Hindi→Hindi, English→English, or any other language as written). Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. Return the JSON object from your instructions.`;
+        ? `This is a brand-new isolated request — ignore any notion of prior chats.\n\nLatest incoming message:\n${message}\n\nOptional context from the user:\n${context}\n\nMatch language/script for BOTH replies (natural and playful) (Tamil→Tamil, Hindi→Hindi, English→English, or any other language as written). Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. Return the JSON object from your instructions.`
+        : `This is a brand-new isolated request — ignore any notion of prior chats.\n\nLatest incoming message:\n${message}\n\nMatch language/script for BOTH replies (natural and playful) (Tamil→Tamil, Hindi→Hindi, English→English, or any other language as written). Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. Return the JSON object from your instructions.`;
     } else {
       return jsonResponse(
         {
@@ -557,7 +615,8 @@ Deno.serve(async (req) => {
     languageSource = message ||
       String(ai.latest_incoming ?? "").trim();
 
-    let validated = validateReplies(ai, languageSource);
+    const validateOpts = { skipLanguageCheck };
+    let validated = validateReplies(ai, languageSource, validateOpts);
     for (let attempt = 0; attempt < 2; attempt++) {
       if (validated.ok) break;
       const distinctFail =
@@ -592,7 +651,7 @@ Deno.serve(async (req) => {
       languageSource = message ||
         String(ai.latest_incoming ?? "").trim() ||
         languageSource;
-      validated = validateReplies(ai, languageSource);
+      validated = validateReplies(ai, languageSource, validateOpts);
     }
 
     if (!validated.ok) {

@@ -12,10 +12,10 @@ Future<void> main() async {
     await configureDependencies();
     runApp(const WingmanApp());
   } catch (e, st) {
-    debugPrint('Wingman bootstrap failed: $e\n$st');
+    debugPrint('Gotchu bootstrap failed: $e\n$st');
     final message = e is AppException
         ? e.message
-        : 'Wingman couldn’t start. Check setup and try again.';
+        : 'Gotchu couldn’t start. Check setup and try again.';
     runApp(_BootstrapErrorApp(message: message));
   }
 }

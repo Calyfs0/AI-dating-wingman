@@ -19,7 +19,7 @@ class WingmanBrandHeader extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Wingman', style: AppTypography.brandScript),
+            Text('Gotchu', style: AppTypography.brandScript),
             const SizedBox(width: 6),
             Padding(
               padding: const EdgeInsets.only(top: 14),
@@ -39,9 +39,9 @@ class WingmanBrandHeader extends StatelessWidget {
               fontSize: 16,
             ),
             children: const [
-              TextSpan(text: 'Your next reply, '),
+              TextSpan(text: 'Stuck on a reply? '),
               TextSpan(
-                text: 'figured out.',
+                text: 'Gotchu.',
                 style: TextStyle(
                   color: AppColors.neonPink,
                   fontWeight: FontWeight.w700,
@@ -63,18 +63,14 @@ class MoodChipRow extends StatelessWidget {
     return const Row(
       children: [
         Expanded(
-          child: _MoodChip(Icons.favorite_rounded, 'Flirt better'),
+          child: _MoodChip(Icons.favorite_rounded, 'Keep the vibe'),
         ),
-        SizedBox(width: 6),
+        SizedBox(width: 8),
         Expanded(
           child: _MoodChip(
             Icons.local_fire_department_rounded,
-            'Keep the vibe',
+            'Flirt better',
           ),
-        ),
-        SizedBox(width: 6),
-        Expanded(
-          child: _MoodChip(Icons.calendar_month_outlined, 'Get the date'),
         ),
       ],
     );
@@ -127,11 +123,23 @@ class DashedUploadZone extends StatelessWidget {
     this.onTap,
     this.onCameraTap,
     this.onTypeMessageTap,
+    this.title = 'Upload a screenshot of your chat',
+    this.subtitle = "I'll help you figure out what to say.",
+    this.footer = 'iMessage · WhatsApp · Tinder · Hinge',
+    this.cameraTitle = 'Take a photo',
+    this.cameraSubtitle = 'Snap the chat from another phone',
+    this.showTypeMessage = true,
   });
 
   final VoidCallback? onTap;
   final VoidCallback? onCameraTap;
   final VoidCallback? onTypeMessageTap;
+  final String title;
+  final String subtitle;
+  final String footer;
+  final String cameraTitle;
+  final String cameraSubtitle;
+  final bool showTypeMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +216,7 @@ class DashedUploadZone extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Upload a screenshot of your chat',
+                            title,
                             textAlign: TextAlign.center,
                             style: text.titleLarge?.copyWith(
                               fontWeight: FontWeight.w700,
@@ -217,21 +225,23 @@ class DashedUploadZone extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            "I'll help you figure out what to say.",
+                            subtitle,
                             textAlign: TextAlign.center,
                             style: text.bodyMedium?.copyWith(
                               color: const Color(0xFFB9AEC8),
                             ),
                           ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'iMessage · WhatsApp · Tinder · Hinge',
-                            textAlign: TextAlign.center,
-                            style: text.labelSmall?.copyWith(
-                              color: const Color(0xFF7E738F),
-                              letterSpacing: 0.2,
+                          if (footer.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            Text(
+                              footer,
+                              textAlign: TextAlign.center,
+                              style: text.labelSmall?.copyWith(
+                                color: const Color(0xFF7E738F),
+                                letterSpacing: 0.2,
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
@@ -240,17 +250,19 @@ class DashedUploadZone extends StatelessWidget {
                 _UploadZoneDivider(),
                 _UploadZoneRow(
                   icon: Icons.photo_camera_outlined,
-                  title: 'Take a photo',
-                  subtitle: 'Snap the chat from another phone',
+                  title: cameraTitle,
+                  subtitle: cameraSubtitle,
                   onTap: onCameraTap,
                 ),
-                _UploadZoneDivider(),
-                _UploadZoneRow(
-                  icon: Icons.keyboard_alt_outlined,
-                  title: 'Type a message instead',
-                  subtitle: 'Paste or enter the message you received',
-                  onTap: onTypeMessageTap,
-                ),
+                if (showTypeMessage) ...[
+                  _UploadZoneDivider(),
+                  _UploadZoneRow(
+                    icon: Icons.keyboard_alt_outlined,
+                    title: 'Type a message instead',
+                    subtitle: 'Paste or enter the message you received',
+                    onTap: onTypeMessageTap,
+                  ),
+                ],
               ],
             ),
           ),
@@ -344,10 +356,12 @@ class NeonGenerateButton extends StatelessWidget {
     super.key,
     required this.onPressed,
     this.isLoading = false,
+    this.label = 'Generate replies',
   });
 
   final VoidCallback? onPressed;
   final bool isLoading;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -405,7 +419,7 @@ class NeonGenerateButton extends StatelessWidget {
                         ),
                         const SizedBox(width: 10),
                         Text(
-                          'Generate replies',
+                          label,
                           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                 color: labelColor,
                                 fontSize: 16,

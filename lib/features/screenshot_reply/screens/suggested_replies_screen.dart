@@ -10,7 +10,7 @@ import '../widgets/desire_backdrop.dart';
 import '../widgets/new_chat_options_sheet.dart';
 import '../widgets/tone_icons.dart';
 
-/// Results screen — editable message preview, three reply cards, bottom actions.
+/// Results screen — editable message preview, two reply cards, bottom actions.
 class SuggestedRepliesScreen extends StatefulWidget {
   const SuggestedRepliesScreen({super.key});
 

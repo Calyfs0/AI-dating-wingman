@@ -1,5 +1,5 @@
 name: wingman
-description: Premium private AI dating coach. Know what to say. Know what to do. Become better at dating.
+description: Gotchu — late-night dating companion. Stuck on a reply? Gotchu.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -40,3 +40,4 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/mockups/
+    - assets/brand/

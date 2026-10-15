@@ -1,11 +1,11 @@
 {
-    "name": "wingman",
-    "short_name": "wingman",
+    "name": "Gotchu",
+    "short_name": "Gotchu",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#07050C",
+    "theme_color": "#FF4EAB",
+    "description": "Stuck on a reply? Gotchu.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

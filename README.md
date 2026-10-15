@@ -1,15 +1,21 @@
-# Wingman
+# Gotchu
 
-Your next reply, figured out.
+Stuck on a reply? Gotchu.
 
-## First feature
+Late-night dating companion — turn chat tension into a sendable text.
 
-**Screenshot → Reply**
+## What’s in the app
 
-1. Choose a chat screenshot  
-2. AI reads the conversation  
-3. Get three ready-to-send replies (Natural · Playful · Confident)  
-4. Copy the one you like  
+Bottom tabs: **Reply** · **Openers** · **People** · **You**
+
+| Tab | What it does |
+| --- | --- |
+| **Reply** | Chat screenshot or typed message → Natural / Playful replies |
+| **Openers** | Profile screenshot → two first-message options |
+| **People** | Light local list (your move / waiting / quiet) |
+| **You** | Default vibe, casual + language prefs, privacy note |
+
+Screenshots are processed in memory and never stored.
 
 ## Stack
 
@@ -21,14 +27,12 @@ Your next reply, figured out.
 
 See [docs/SETUP.md](docs/SETUP.md).
 
-Public keys: [`lib/core/config/supabase_config.dart`](lib/core/config/supabase_config.dart).
-
 ```bash
 flutter pub get
 flutter run
 ```
 
-Deploy the AI function:
+Deploy the AI function (replies + openers):
 
 ```bash
 npx supabase functions deploy generate-replies

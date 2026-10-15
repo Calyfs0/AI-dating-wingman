@@ -12,7 +12,6 @@ void main() {
       'replies': {
         'natural': 'Yeah, I’d be down. When works for you?',
         'playful': 'Coffee sounds dangerous — I’m in. Tomorrow?',
-        'confident': 'Let’s do it. Are you free Thursday evening?',
       },
     });
 
@@ -20,7 +19,6 @@ void main() {
     final replies = (result as RepliesReady).replies;
     expect(replies.natural, contains('down'));
     expect(replies.playful, contains('Coffee'));
-    expect(replies.confident, contains('Thursday'));
     expect(replies.latestIncoming, 'Want to grab coffee?');
   });
 
@@ -30,7 +28,6 @@ void main() {
       'replies': {
         'natural': '"Sounds good to me."',
         'playful': "'Careful, that smile is illegal.'",
-        'confident': '“I’m free Friday.”',
       },
     });
 
@@ -38,7 +35,6 @@ void main() {
     final replies = (result as RepliesReady).replies;
     expect(replies.natural, 'Sounds good to me.');
     expect(replies.playful, 'Careful, that smile is illegal.');
-    expect(replies.confident, 'I’m free Friday.');
   });
 
   test('parses no-reply-needed outcome', () {
@@ -63,8 +59,7 @@ void main() {
         'readable': true,
         'replies': {
           'natural': 'Hi',
-          'playful': 'Hey',
-          'confident': '',
+          'playful': '',
         },
       }),
       throwsA(isA<FormatException>()),
@@ -78,7 +73,6 @@ void main() {
         'replies': {
           'natural': 'I feel the same way about you.',
           'playful': 'I feel the same way about you!',
-          'confident': 'Let’s meet this weekend instead.',
         },
       }),
       throwsA(
@@ -98,7 +92,6 @@ void main() {
       'replies': {
         'natural': 'அட… இப்படி சொன்னது ரொம்ப இதமா இருக்கு.',
         'playful': 'டேய் மெதுவா போ — இதயத்தையே கொண்டுட்டாரு 😏',
-        'confident': 'கேட்டுட்டேன். நம்ம பேசிக்கலாம் — நீ எப்போ free?',
       },
     });
 
@@ -106,7 +99,6 @@ void main() {
     final replies = (result as RepliesReady).replies;
     expect(replies.natural, contains('இதமா'));
     expect(replies.playful, contains('மெதுவா'));
-    expect(replies.confident, contains('கேட்டுட்டேன்'));
     expect(replies.latestIncoming, 'நான் உன்னை காதலிக்கிறேன்');
   });
 

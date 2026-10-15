@@ -300,7 +300,6 @@ class ReplyFlowController extends ChangeNotifier {
           this.replies = SuggestedReplies(
             natural: replies.natural,
             playful: replies.playful,
-            confident: replies.confident,
             latestIncoming: trimmed,
           );
           phase = ReplyFlowPhase.results;

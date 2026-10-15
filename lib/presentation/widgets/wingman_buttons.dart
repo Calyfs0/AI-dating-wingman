@@ -61,7 +61,7 @@ class _WingmanButtonState extends State<WingmanButton> {
                         height: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.2,
-                          color: AppColors.champagne,
+                          color: AppColors.textInverse,
                         ),
                       )
                     : Row(
@@ -71,7 +71,7 @@ class _WingmanButtonState extends State<WingmanButton> {
                             Icon(
                               widget.icon,
                               color: enabled
-                                  ? AppColors.champagne
+                                  ? AppColors.textInverse
                                   : AppColors.textTertiary,
                               size: 20,
                             ),
@@ -84,7 +84,7 @@ class _WingmanButtonState extends State<WingmanButton> {
                                 .labelLarge
                                 ?.copyWith(
                                   color: enabled
-                                      ? AppColors.champagne
+                                      ? AppColors.textInverse
                                       : AppColors.textTertiary,
                                   letterSpacing: 0.4,
                                 ),
@@ -120,7 +120,7 @@ class WingmanSecondaryButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.blush,
+          foregroundColor: AppColors.accentSoft,
           side: BorderSide(color: AppColors.accent.withValues(alpha: 0.45)),
           shape: const StadiumBorder(),
           textStyle: Theme.of(context).textTheme.labelLarge,

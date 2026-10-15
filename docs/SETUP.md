@@ -1,15 +1,15 @@
-# Wingman setup — Screenshot → Reply
+# Gotchu setup — Dating companion
 
-This build has one feature: upload a chat screenshot, get three reply options.
+Tabs: **Reply** · **Openers** · **People** · **You**
 
 ## 1. Supabase
 
 1. Open your project (or create one) at [supabase.com](https://supabase.com).
 2. **Settings → API**: copy **Project URL** and **anon public** key into
    [`lib/core/config/supabase_config.dart`](../lib/core/config/supabase_config.dart).
-3. **Authentication → Providers → Anonymous**: enable anonymous sign-ins.
+3. **Authentication → Providers · Anonymous**: enable anonymous sign-ins.
 
-No database tables are required for this feature. Screenshots are not stored.
+No database tables are required. Screenshots are not stored. People / You prefs use on-device SharedPreferences only.
 
 ## 2. OpenAI secret (server only)
 
@@ -21,6 +21,8 @@ npx supabase secrets set OPENAI_API_KEY=sk-...
 ```
 
 ## 3. Deploy the Edge Function
+
+`generate-replies` handles both chat replies and profile openers (`mode: "openers"`).
 
 ```bash
 npx supabase link --project-ref YOUR_PROJECT_REF
@@ -34,19 +36,10 @@ flutter pub get
 flutter run
 ```
 
-Optional overrides:
-
-```bash
-flutter run \
-  --dart-define=SUPABASE_URL=https://YOUR_REF.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
-```
-
 ## Manual test
 
-1. App opens on the upload screen (no login).
-2. **Choose screenshot** → pick a real chat screenshot from Photos.
-3. **Generate replies** → loading copy appears, then three reply cards.
-4. **Copy** → “Copied” confirmation; paste elsewhere to verify.
-5. **Try again** regenerates; **Change screenshot** returns to upload.
-6. Unreadable / non-chat images show a friendly error (no fake replies).
+1. App opens on **Reply** as **Gotchu** with bottom tabs.
+2. **Reply**: screenshot or type message → two reply cards (Natural / Playful).
+3. **Openers**: profile screenshot → two first-message cards.
+4. **People**: add someone with status; long-press to remove.
+5. **You**: vibe prefs + Gotchu Pro card.

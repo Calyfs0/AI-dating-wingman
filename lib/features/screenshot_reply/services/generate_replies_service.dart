@@ -19,6 +19,8 @@ abstract class GenerateRepliesService {
     required String message,
     String? context,
   });
+
+  Future<ReplyGenerationResult> generateOpeners(String imagePath);
 }
 
 class SupabaseGenerateRepliesService implements GenerateRepliesService {
@@ -70,6 +72,20 @@ class SupabaseGenerateRepliesService implements GenerateRepliesService {
       body['context'] = ctx;
     }
     return _invoke(body);
+  }
+
+  @override
+  Future<ReplyGenerationResult> generateOpeners(String imagePath) async {
+    final dataUrl = await _encodeImage(imagePath);
+    if (dataUrl == null) {
+      throw const AnalysisException(
+        "Couldn't read that image. Try another profile screenshot.",
+      );
+    }
+    return _invoke({
+      'image': dataUrl,
+      'mode': 'openers',
+    });
   }
 
   Future<ReplyGenerationResult> _invoke(Map<String, dynamic> body) async {

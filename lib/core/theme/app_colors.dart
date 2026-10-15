@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Neon dating-assistant palette matching the Wingman mockup.
+/// Neon dating-companion palette for Gotchu.
 abstract final class AppColors {
   static const Color background = Color(0xFF07050C);
   static const Color backgroundElevated = Color(0xFF100C18);

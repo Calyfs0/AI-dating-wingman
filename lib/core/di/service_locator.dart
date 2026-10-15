@@ -29,7 +29,7 @@ Future<void> configureDependencies() async {
       SupabaseGenerateRepliesService(client),
     );
 
-  debugPrint('Wingman: Supabase backend enabled (screenshot → reply)');
+  debugPrint('Gotchu: Supabase backend enabled (screenshot → reply)');
 }
 
 Future<void> _ensureAnonymousSession(SupabaseClient client) async {
@@ -38,5 +38,5 @@ Future<void> _ensureAnonymousSession(SupabaseClient client) async {
   if (response.user == null) {
     throw const AuthException('Could not start a private session.');
   }
-  debugPrint('Wingman: anonymous session ready');
+  debugPrint('Gotchu: anonymous session ready');
 }
