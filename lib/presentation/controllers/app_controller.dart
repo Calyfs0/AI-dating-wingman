@@ -52,24 +52,17 @@ class AppController extends ChangeNotifier {
   bool isOnline = true;
   bool isBootstrapping = true;
   String? errorMessage;
-  UsageSnapshot? usageSnapshot;
   StreamSubscription<bool>? _connectivitySub;
 
   Future<void> _init() async {
     profile = await _auth.ensureAnonymousSession();
     people = await _people.list();
-    usageSnapshot = await _usage.snapshot();
     isOnline = await _connectivity.isOnline;
     _connectivitySub = _connectivity.onStatusChange.listen((online) {
       isOnline = online;
       notifyListeners();
     });
     isBootstrapping = false;
-    notifyListeners();
-  }
-
-  Future<void> refreshUsage() async {
-    usageSnapshot = await _usage.snapshot();
     notifyListeners();
   }
 

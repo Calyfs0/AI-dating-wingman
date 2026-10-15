@@ -1,34 +1,30 @@
-# Wingman setup
+# Wingman setup — Screenshot → Reply
 
-## 1. Supabase project
+This build has one feature: upload a chat screenshot, get three reply options.
 
-1. Create or open a project at [supabase.com](https://supabase.com).
-2. Copy **Project URL** and **anon public** key into
-   [`lib/core/config/supabase_config.dart`](../lib/core/config/supabase_config.dart)
-   (or pass `--dart-define=SUPABASE_URL=...` and `SUPABASE_ANON_KEY=...`).
+## 1. Supabase
+
+1. Open your project (or create one) at [supabase.com](https://supabase.com).
+2. **Settings → API**: copy **Project URL** and **anon public** key into
+   [`lib/core/config/supabase_config.dart`](../lib/core/config/supabase_config.dart).
 3. **Authentication → Providers → Anonymous**: enable anonymous sign-ins.
-4. Apply the app schema (profiles, people, conversations, usage):
 
-```bash
-npx supabase link --project-ref YOUR_PROJECT_REF
-npx supabase db push
-```
+No database tables are required for this feature. Screenshots are not stored.
 
-## 2. OpenAI (server only)
+## 2. OpenAI secret (server only)
 
-1. Create an API key at [platform.openai.com](https://platform.openai.com).
+1. Create an API key at [platform.openai.com](https://platform.openai.com) (billing enabled).
 2. Set it as an Edge Function secret — never in Flutter:
 
 ```bash
 npx supabase secrets set OPENAI_API_KEY=sk-...
 ```
 
-## 3. Deploy Edge Functions
+## 3. Deploy the Edge Function
 
 ```bash
+npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase functions deploy generate-replies
-# Optional (legacy / extended flows):
-npx supabase functions deploy analyze-conversation generate-response
 ```
 
 ## 4. Run the app
@@ -38,17 +34,19 @@ flutter pub get
 flutter run
 ```
 
-Without Supabase keys, the app boots in **local/mock mode** (demo people, mock AI for secondary flows). Screenshot replies still need Supabase + `generate-replies` for production.
+Optional overrides:
 
-## Manual test — core reply flow
+```bash
+flutter run \
+  --dart-define=SUPABASE_URL=https://YOUR_REF.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
+```
 
-1. Complete onboarding (or skip through) → land on **Home**.
-2. Tap **Reply** or the center **+** quick action → **Reply**.
-3. Upload a chat screenshot → **Generate replies** → three cards → **Copy**.
-4. Back to Home → **Recent replies** shows the session on this device.
+## Manual test
 
-## Manual test — shell
-
-1. **People** — open a person → **Date prep** / **Debrief**.
-2. **Practice** — start a topic → submit → feedback.
-3. **You** — style, privacy, subscription screens load without errors.
+1. App opens on the upload screen (no login).
+2. **Choose screenshot** → pick a real chat screenshot from Photos.
+3. **Generate replies** → loading copy appears, then three reply cards.
+4. **Copy** → “Copied” confirmation; paste elsewhere to verify.
+5. **Try again** regenerates; **Change screenshot** returns to upload.
+6. Unreadable / non-chat images show a friendly error (no fake replies).
