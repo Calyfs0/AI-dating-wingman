@@ -248,9 +248,29 @@ class _PersonProfileScreenState extends State<PersonProfileScreen> {
           if (_tab == 0) ..._conversationTab(context, person),
           if (_tab == 1) ..._insightsTab(context, person),
           if (_tab == 2) ..._notesTab(context),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: WingmanSecondaryButton(
+                  label: 'Date prep',
+                  onPressed: () =>
+                      context.push('/people/${person.id}/prepare'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: WingmanSecondaryButton(
+                  label: 'Debrief',
+                  onPressed: () =>
+                      context.push('/people/${person.id}/debrief'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
           WingmanButton(
-            label: 'Analyze new chat',
+            label: 'Help me reply',
             onPressed: () => context.push('/reply'),
           ),
           const SizedBox(height: AppSpacing.xl),

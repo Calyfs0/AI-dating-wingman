@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/greeting.dart';
+import '../../../data/mock/demo_data.dart';
+import '../../../services/subscription/subscription_services.dart';
 import '../../controllers/app_controller.dart';
 import '../../widgets/wingman_buttons.dart';
 import '../../widgets/wingman_components.dart';
@@ -18,6 +20,7 @@ class HomeScreen extends StatelessWidget {
     final profile = controller.profile;
     final people = controller.people.take(3).toList();
     final name = profile?.displayName ?? 'You';
+    final usage = controller.usageSnapshot;
 
     return WingmanScaffold(
       padding: EdgeInsets.zero,
@@ -43,71 +46,65 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     WingmanIconButton(
+                      icon: Icons.history_rounded,
+                      tooltip: 'Recent replies',
+                      onPressed: () => context.push('/history'),
+                    ),
+                    WingmanIconButton(
                       icon: Icons.settings_outlined,
                       tooltip: 'Settings',
                       onPressed: () => context.go('/you'),
                     ),
                   ],
                 ),
+                if (usage != null && !usage.isPro) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _UsageCard(usage: usage),
+                ],
                 const SizedBox(height: AppSpacing.xxl),
                 Text(
-                  'Know what to say next.',
-                  style: Theme.of(context).textTheme.displaySmall,
+                  'What are we working on?',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Screenshot a chat. Wingman writes a reply you can actually send.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      controller.analytics.track('reply_started');
-                      context.push('/reply');
-                    },
-                    borderRadius: BorderRadius.circular(AppRadius.xl),
-                    child: Ink(
-                      height: 168,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(AppRadius.xl),
-                        gradient: AppColors.accentGradient,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.chat_bubble_outline_rounded,
-                              color: AppColors.textInverse,
-                              size: 28,
-                            ),
-                            const Spacer(),
-                            Text(
-                              'Help me reply',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
-                                  ?.copyWith(color: AppColors.textInverse),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Upload a screenshot',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: AppColors.textInverse
-                                        .withValues(alpha: 0.85),
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
+                const SizedBox(height: AppSpacing.md),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.05,
+                  children: [
+                    _ActionTile(
+                      title: 'Reply',
+                      subtitle:
+                          'Upload a conversation.\nI\'ll tell you what to say.',
+                      icon: Icons.chat_bubble_outline_rounded,
+                      emphasized: true,
+                      onTap: () {
+                        controller.analytics.track('reply_started');
+                        context.push('/reply');
+                      },
                     ),
-                  ),
+                    _ActionTile(
+                      title: 'Practice',
+                      subtitle: 'Sharpen your texting muscle.',
+                      icon: Icons.fitness_center_rounded,
+                      onTap: () => context.go('/practice'),
+                    ),
+                    _ActionTile(
+                      title: 'Opener',
+                      subtitle: 'Start the conversation right.',
+                      icon: Icons.waving_hand_outlined,
+                      onTap: () => context.push('/opener'),
+                    ),
+                    _ActionTile(
+                      title: 'Profile',
+                      subtitle: 'Improve your dating profile.',
+                      icon: Icons.badge_outlined,
+                      onTap: () => context.push('/profile-audit'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: AppSpacing.sectionGap),
                 WingmanSectionHeader(
@@ -134,10 +131,125 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                const SizedBox(height: AppSpacing.sectionGap),
+                WingmanInsightCard(
+                  title: DemoData.homeInsight.title,
+                  body: DemoData.homeInsight.body,
+                  ctaLabel: DemoData.homeInsight.ctaLabel,
+                  onCta: () => context.push('/insights'),
+                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _UsageCard extends StatelessWidget {
+  const _UsageCard({required this.usage});
+
+  final UsageSnapshot usage;
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = (usage.analysesLimit - usage.analysesUsed).clamp(0, 99);
+    return WingmanCard(
+      onTap: () => context.push('/paywall'),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Free plan',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$remaining of ${usage.analysesLimit} conversation analyses left this week',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          Text(
+            'Go Pro',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppColors.accent,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+    this.emphasized = false,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: emphasized
+              ? AppColors.accent.withValues(alpha: 0.4)
+              : AppColors.borderSubtle,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: emphasized
+                      ? AppColors.accentMuted
+                      : AppColors.surfaceHighlight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color:
+                      emphasized ? AppColors.accent : AppColors.textSecondary,
+                  size: 20,
+                ),
+              ),
+              const Spacer(),
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
