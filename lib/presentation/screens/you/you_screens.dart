@@ -49,6 +49,7 @@ class YouScreen extends StatelessWidget {
             onPressed: () => context.push('/paywall'),
           ),
           const SizedBox(height: AppSpacing.xl),
+          _tile(context, 'Recent replies', '/history'),
           _tile(context, 'Communication style', '/you/style'),
           _tile(context, 'Dating goals', '/you/goals'),
           _tile(context, 'Privacy & data', '/privacy'),

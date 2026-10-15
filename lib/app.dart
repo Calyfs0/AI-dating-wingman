@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'core/di/service_locator.dart';
+import 'core/routing/app_router.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'features/screenshot_reply/controllers/reply_flow_controller.dart';
-import 'features/screenshot_reply/screens/reply_flow_shell.dart';
 import 'features/screenshot_reply/services/generate_replies_service.dart';
+import 'presentation/controllers/app_controller.dart';
 
 class WingmanApp extends StatefulWidget {
   const WingmanApp({super.key});
@@ -17,12 +19,16 @@ class WingmanApp extends StatefulWidget {
 }
 
 class _WingmanAppState extends State<WingmanApp> {
-  late final ReplyFlowController _controller;
+  late final AppController _appController;
+  late final ReplyFlowController _replyController;
+  late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
-    _controller = ReplyFlowController(getIt<GenerateRepliesService>());
+    _appController = AppController();
+    _replyController = ReplyFlowController(getIt<GenerateRepliesService>());
+    _router = createAppRouter(_appController);
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -35,20 +41,24 @@ class _WingmanAppState extends State<WingmanApp> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _replyController.dispose();
+    _appController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _controller,
-      child: MaterialApp(
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _appController),
+        ChangeNotifierProvider.value(value: _replyController),
+      ],
+      child: MaterialApp.router(
         title: 'Wingman',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark(),
         themeMode: ThemeMode.dark,
-        home: const ReplyFlowShell(),
+        routerConfig: _router,
       ),
     );
   }

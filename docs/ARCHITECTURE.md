@@ -6,10 +6,10 @@
 2. **Dependencies** — Flutter 3.35 / Dart 3.9, GoRouter, Provider, GetIt, Supabase, RevenueCat, image_picker, connectivity, secure storage.
 3. **Screens** — full inventory implemented (onboarding → home → reply → people → practice → you → paywall + states).
 4. **Design system** — `AppColors`, `AppTypography`, `AppSpacing`, `AppRadius`, `AppShadows`, `AppAnimations`, reusable Wingman components.
-5. **Backend** — Supabase-ready auth/data boundaries + SQL/RLS foundation; mock AI services stand in for edge functions.
-6. **Reuse** — N/A (greenfield).
-7. **Refactor later** — swap mock AI for edge functions; wire real RevenueCat purchases; complete OAuth linking.
-8. **Created** — domain entities, repositories, services, DI, routing, component library, all primary flows.
+5. **Backend** — Supabase auth/data + `generate-replies` edge function for the core flow; mock AI for openers, practice, profile audit until wired.
+6. **Core flow isolation** — `lib/features/screenshot_reply/` is the mockup-accurate reply UI; the shell navigates to it via `ScreenshotReplyScreen` without modifying those widgets.
+7. **Refactor later** — RevenueCat purchases, OAuth linking, persist “save to person” from reply results into Supabase conversations.
+8. **Created** — full shell (onboarding, home, people, practice, you), reply history, usage surfaces, quick-actions FAB.
 
 ## Pipeline
 

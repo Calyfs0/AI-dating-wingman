@@ -48,8 +48,19 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _goNext() {
     if (!mounted || _navigated) return;
+    final app = context.read<AppController>();
+    if (app.isBootstrapping) {
+      void listener() {
+        if (!app.isBootstrapping) {
+          app.removeListener(listener);
+          _goNext();
+        }
+      }
+      app.addListener(listener);
+      return;
+    }
     _navigated = true;
-    final profile = context.read<AppController>().profile;
+    final profile = app.profile;
     if (profile?.onboardingCompleted == true) {
       context.go('/home');
     } else {
