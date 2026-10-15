@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
-import 'quick_actions_sheet.dart';
 import 'wingman_nav_bar.dart';
 
 class MainShell extends StatelessWidget {
@@ -19,7 +17,6 @@ class MainShell extends StatelessWidget {
           index,
           initialLocation: index == navigationShell.currentIndex,
         ),
-        onCenterTap: () => showQuickActionsSheet(context),
       ),
     );
   }

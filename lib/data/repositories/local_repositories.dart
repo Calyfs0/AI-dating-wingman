@@ -1,5 +1,4 @@
 import 'package:uuid/uuid.dart';
-import '../mock/demo_data.dart';
 import '../../domain/entities/ai_generation.dart';
 import '../../domain/entities/conversation.dart';
 import '../../domain/entities/person.dart';
@@ -57,13 +56,6 @@ class LocalPersonRepository implements PersonRepository {
   @override
   Future<void> delete(String id) async {
     _people.removeWhere((p) => p.id == id);
-  }
-
-  Future<void> seedDemoIfEmpty() async {
-    if (_people.isNotEmpty) return;
-    for (final person in DemoData.demoPeople) {
-      _people.add(person);
-    }
   }
 }
 
