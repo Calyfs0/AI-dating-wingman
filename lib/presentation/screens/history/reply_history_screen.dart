@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../services/reply/reply_history_service.dart';
 import '../../widgets/wingman_buttons.dart';
+import '../../widgets/wingman_cards.dart';
 import '../../widgets/wingman_components.dart';
 
 class ReplyHistoryScreen extends StatefulWidget {

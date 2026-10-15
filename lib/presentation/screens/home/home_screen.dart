@@ -9,6 +9,7 @@ import '../../../data/mock/demo_data.dart';
 import '../../../services/subscription/subscription_services.dart';
 import '../../controllers/app_controller.dart';
 import '../../widgets/wingman_buttons.dart';
+import '../../widgets/wingman_cards.dart';
 import '../../widgets/wingman_components.dart';
 
 class HomeScreen extends StatelessWidget {
