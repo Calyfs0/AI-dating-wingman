@@ -32,6 +32,12 @@ flutter pub get
 flutter run
 ```
 
+## Web (GitHub Pages)
+
+Live at: https://calyfs0.github.io/AI-dating-wingman/
+
+Pushes to `main` build Flutter web and deploy via `.github/workflows/deploy-pages.yml`.
+
 Deploy the AI function (replies + openers):
 
 ```bash
