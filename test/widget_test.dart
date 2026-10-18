@@ -59,7 +59,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Gotchu'), findsOneWidget);
+    expect(find.textContaining('Gotchu'), findsWidgets);
     expect(find.text('Generate replies'), findsOneWidget);
     expect(find.text('Upload a screenshot of your chat'), findsOneWidget);
     expect(find.text('Flirt better'), findsOneWidget);

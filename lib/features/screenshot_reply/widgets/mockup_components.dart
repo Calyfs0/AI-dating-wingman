@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_typography.dart';
+import '../../../presentation/widgets/gotchu_logo.dart';
 
 class WingmanBrandHeader extends StatelessWidget {
   const WingmanBrandHeader({super.key});
@@ -16,22 +16,8 @@ class WingmanBrandHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Gotchu', style: AppTypography.brandScript),
-            const SizedBox(width: 6),
-            Padding(
-              padding: const EdgeInsets.only(top: 14),
-              child: Icon(
-                Icons.favorite_rounded,
-                size: 16,
-                color: AppColors.neonPink.withValues(alpha: 0.95),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
+        const GotchuLogo(fontSize: 52),
+        const SizedBox(height: 4),
         Text.rich(
           TextSpan(
             style: body.bodyLarge?.copyWith(

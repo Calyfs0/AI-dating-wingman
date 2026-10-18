@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../presentation/widgets/gotchu_logo.dart';
 import '../../screenshot_reply/models/suggested_replies.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../controllers/you_preferences_controller.dart';
@@ -62,14 +63,7 @@ class YouScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Gotchu',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
+                          const GotchuLogo(fontSize: 36),
                           const SizedBox(height: 2),
                           Text(
                             'Free plan',

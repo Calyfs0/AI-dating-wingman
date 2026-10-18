@@ -28,11 +28,21 @@ dependencies:
   supabase_flutter: ^2.10.0
   # Subscription-ready boundary (RevenueCat is source of truth for entitlements)
   purchases_flutter: ^8.10.6
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/brand/gotchu_launcher_icon.png
+  remove_alpha_ios: true
+  adaptive_icon_background: "#07050C"
+  adaptive_icon_foreground: assets/brand/gotchu_launcher_icon.png
 
 flutter:
   uses-material-design: true
@@ -41,3 +51,4 @@ flutter:
     - assets/icons/
     - assets/mockups/
     - assets/brand/
+    - assets/sounds/

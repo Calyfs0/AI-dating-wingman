@@ -1,3 +1,4 @@
+import AudioToolbox
 import Flutter
 import UIKit
 
@@ -12,5 +13,19 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    let channel = FlutterMethodChannel(
+      name: "gotchu/sfx",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    channel.setMethodCallHandler { call, result in
+      if call.method == "keyClick" {
+        // Real iPhone keyboard click (Settings → Sounds → Keyboard Feedback).
+        AudioServicesPlaySystemSound(1104)
+        result(nil)
+      } else {
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 }
