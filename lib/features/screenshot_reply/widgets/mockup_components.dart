@@ -3,12 +3,15 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../presentation/widgets/gotchu_logo.dart';
+import '../../you/controllers/you_preferences_controller.dart';
+import '../models/suggested_replies.dart';
 
-class WingmanBrandHeader extends StatelessWidget {
-  const WingmanBrandHeader({super.key});
+class GotchuBrandHeader extends StatelessWidget {
+  const GotchuBrandHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -41,21 +44,30 @@ class WingmanBrandHeader extends StatelessWidget {
   }
 }
 
+/// Quick vibe picker — writes to You prefs (used on generate).
 class MoodChipRow extends StatelessWidget {
   const MoodChipRow({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final you = context.watch<YouPreferencesController>();
+    return Row(
       children: [
         Expanded(
-          child: _MoodChip(Icons.favorite_rounded, 'Keep the vibe'),
+          child: _MoodChip(
+            Icons.favorite_rounded,
+            'Natural',
+            selected: you.defaultVibe == ReplyTone.natural,
+            onTap: () => you.setDefaultVibe(ReplyTone.natural),
+          ),
         ),
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         Expanded(
           child: _MoodChip(
             Icons.local_fire_department_rounded,
-            'Flirt better',
+            'Playful',
+            selected: you.defaultVibe == ReplyTone.playful,
+            onTap: () => you.setDefaultVibe(ReplyTone.playful),
           ),
         ),
       ],
@@ -64,40 +76,72 @@ class MoodChipRow extends StatelessWidget {
 }
 
 class _MoodChip extends StatelessWidget {
-  const _MoodChip(this.icon, this.label);
+  const _MoodChip(
+    this.icon,
+    this.label, {
+    required this.selected,
+    required this.onTap,
+  });
+
   final IconData icon;
   final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0x990A0610),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: AppColors.neonPink.withValues(alpha: 0.65),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 12, color: AppColors.neonPink),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$label vibe',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppColors.neonPink.withValues(alpha: 0.22)
+                  : const Color(0x990A0610),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: selected
+                    ? AppColors.neonPink
+                    : AppColors.neonPink.withValues(alpha: 0.45),
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 14,
+                  color: selected ? Colors.white : AppColors.neonPink,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
                   ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

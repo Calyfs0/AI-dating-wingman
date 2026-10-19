@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../controllers/people_controller.dart';
 import '../models/person.dart';
+import '../widgets/person_coach_sheets.dart';
 
 class PeopleScreen extends StatelessWidget {
   const PeopleScreen({super.key});
@@ -43,7 +44,7 @@ class PeopleScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Your chats, lightly tracked.',
+                          'A private local list — not sent with Reply or Openers.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             color: const Color(0xFFB9AEC8),
@@ -84,6 +85,14 @@ class PeopleScreen extends StatelessWidget {
                                     ),
                                     onLongPress: () =>
                                         _confirmDelete(context, person),
+                                    onBriefing: () => showPersonBriefingSheet(
+                                      context,
+                                      person: person,
+                                    ),
+                                    onDebrief: () => showPersonDebriefSheet(
+                                      context,
+                                      person: person,
+                                    ),
                                   );
                                 },
                               ),
@@ -294,6 +303,24 @@ class PeopleScreen extends StatelessWidget {
                               ),
                             ),
                           ),
+                          if (isEdit) ...[
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: () async {
+                                Navigator.pop(ctx);
+                                if (context.mounted) {
+                                  await _confirmDelete(context, person);
+                                }
+                              },
+                              child: Text(
+                                'Remove from list',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.danger,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -340,7 +367,7 @@ class _EmptyPeople extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Add someone you’re talking to — just a name and vibe check.',
+              'Track who you’re talking to on this device — names and notes stay local.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 color: const Color(0xFFB9AEC8),
@@ -370,11 +397,15 @@ class _PersonCard extends StatelessWidget {
     required this.person,
     required this.onTap,
     required this.onLongPress,
+    required this.onBriefing,
+    required this.onDebrief,
   });
 
   final Person person;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback onBriefing;
+  final VoidCallback onDebrief;
 
   Color get _statusColor => switch (person.status) {
         PersonStatus.yourMove => AppColors.neonPink,
@@ -473,9 +504,27 @@ class _PersonCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.neonPink.withValues(alpha: 0.7),
+                Column(
+                  children: [
+                    IconButton(
+                      tooltip: 'Briefing',
+                      onPressed: onBriefing,
+                      icon: Icon(
+                        Icons.lightbulb_outline_rounded,
+                        color: AppColors.neonPink.withValues(alpha: 0.85),
+                        size: 20,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Debrief',
+                      onPressed: onDebrief,
+                      icon: const Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        color: Color(0xFFB9AEC8),
+                        size: 20,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

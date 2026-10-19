@@ -61,11 +61,15 @@ class ReplyResponseParser {
     }
 
     final latest = data['latestIncoming']?.toString().trim();
+    final hook = data['hook']?.toString().trim();
+    final why = data['why']?.toString().trim();
     return RepliesReady(
       SuggestedReplies(
         natural: natural,
         playful: playful,
         latestIncoming: latest?.isEmpty == true ? null : latest,
+        hook: hook == null || hook.isEmpty ? null : hook,
+        why: why == null || why.isEmpty ? null : why,
       ),
     );
   }

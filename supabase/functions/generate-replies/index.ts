@@ -339,6 +339,8 @@ Return JSON only:
 {
   "readable": true,
   "latest_incoming": "short summary of the main hook you used",
+  "hook": "the visible profile detail you leaned on",
+  "why": "one short sentence on why this opener works",
   "language": "english|hinglish|hindi|tamil|other",
   "replies": { "natural": "...", "playful": "..." }
 }
@@ -473,12 +475,17 @@ function validateReplies(
     };
   }
 
+  const hook = String(ai.hook ?? "").trim() || null;
+  const why = String(ai.why ?? "").trim() || null;
+
   return {
     ok: true as const,
     body: {
       readable: true,
       latestIncoming,
       replies: { natural, playful },
+      ...(hook ? { hook } : {}),
+      ...(why ? { why } : {}),
     },
   };
 }
@@ -529,6 +536,27 @@ Deno.serve(async (req) => {
     const image = normalizeImageDataUrl(String(body.image ?? ""));
     const mode = String(body.mode ?? "").trim().toLowerCase();
     const isOpeners = mode === "openers";
+    const preferredVibe = String(body.preferredVibe ?? "natural")
+      .trim()
+      .toLowerCase() === "playful"
+      ? "playful"
+      : "natural";
+    const keepCasual = body.keepCasual !== false;
+    const matchLanguage = body.matchLanguage !== false;
+    const personName = String(body.personName ?? "").trim().slice(0, 80);
+    const personNote = String(body.personNote ?? "").trim().slice(0, 400);
+    const prefsHint = [
+      `User preference — lean ${preferredVibe} energy slightly harder on the ${preferredVibe} reply (both tones still required).`,
+      keepCasual
+        ? "User preference — keep both replies casual (no therapy-speak or email energy)."
+        : "User preference — slightly more polished wording is OK, but still sound like a text.",
+      matchLanguage
+        ? "User preference — match their language/script strictly."
+        : "User preference — English replies are OK even if their message is another language.",
+      personName
+        ? `Optional soft context about who they're talking to (name: ${personName}${personNote ? `; note: ${personNote}` : ""}). Use only if it helps tone; never invent facts about that person.`
+        : "",
+    ].filter(Boolean).join(" ");
     const message = String(body.message ?? "").trim().slice(0, MAX_MESSAGE_CHARS);
     // Drop optional context when its script disagrees with the message —
     // prevents a leftover context language from steering a new chat.
@@ -564,16 +592,18 @@ Deno.serve(async (req) => {
       // Image processed in-memory only — never stored.
       instructions = OPENERS_INSTRUCTIONS;
       imageDataUrl = image;
-      skipLanguageCheck = true;
+      skipLanguageCheck = !matchLanguage;
       baseUserText =
         "This is a brand-new isolated request — ignore any notion of prior chats. " +
         "Analyze this dating profile screenshot. Extract real hooks from bio/prompts/interests. " +
         "Write two distinct casual first messages (natural, playful) in the profile's language. " +
-        "Never invent details. Return the JSON object from your instructions.";
+        "Never invent details. Return the JSON object from your instructions.\n\n" +
+        prefsHint;
     } else if (image) {
       // Image processed in-memory only — never stored.
       instructions = SCREENSHOT_INSTRUCTIONS;
       imageDataUrl = image;
+      skipLanguageCheck = !matchLanguage;
       baseUserText = message
         ? "This is a brand-new isolated request — ignore any notion of prior chats. " +
           "Analyze this chat screenshot for conversation context, but treat this as the latest incoming message to reply to:\n" +
@@ -581,18 +611,21 @@ Deno.serve(async (req) => {
           "Match language/script for BOTH replies (natural and playful) to that latest message " +
           "(Tamil→Tamil, Hindi→Hindi, Hinglish→Hinglish, English→English, or any other language as written). " +
           "Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. " +
-          "Return the JSON object from your instructions. Set latest_incoming to the provided latest message."
+          "Return the JSON object from your instructions. Set latest_incoming to the provided latest message.\n\n" +
+          prefsHint
         : "This is a brand-new isolated request — ignore any notion of prior chats. " +
           "Analyze this chat screenshot. Focus on the latest incoming message and visible prior context. " +
           "Match language/script for BOTH replies (natural and playful) " +
           "(Tamil→Tamil, Hindi→Hindi, Hinglish→Hinglish, English→English, or any other language as written). " +
           "Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. " +
-          "Return the JSON object from your instructions.";
+          "Return the JSON object from your instructions.\n\n" +
+          prefsHint;
     } else if (message) {
       instructions = TEXT_INSTRUCTIONS;
+      skipLanguageCheck = !matchLanguage;
       baseUserText = context
-        ? `This is a brand-new isolated request — ignore any notion of prior chats.\n\nLatest incoming message:\n${message}\n\nOptional context from the user:\n${context}\n\nMatch language/script for BOTH replies (natural and playful) (Tamil→Tamil, Hindi→Hindi, English→English, or any other language as written). Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. Return the JSON object from your instructions.`
-        : `This is a brand-new isolated request — ignore any notion of prior chats.\n\nLatest incoming message:\n${message}\n\nMatch language/script for BOTH replies (natural and playful) (Tamil→Tamil, Hindi→Hindi, English→English, or any other language as written). Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. Return the JSON object from your instructions.`;
+        ? `This is a brand-new isolated request — ignore any notion of prior chats.\n\nLatest incoming message:\n${message}\n\nOptional context from the user:\n${context}\n\nMatch language/script for BOTH replies (natural and playful) (Tamil→Tamil, Hindi→Hindi, English→English, or any other language as written). Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. Return the JSON object from your instructions.\n\n${prefsHint}`
+        : `This is a brand-new isolated request — ignore any notion of prior chats.\n\nLatest incoming message:\n${message}\n\nMatch language/script for BOTH replies (natural and playful) (Tamil→Tamil, Hindi→Hindi, English→English, or any other language as written). Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. Return the JSON object from your instructions.\n\n${prefsHint}`;
     } else {
       return jsonResponse(
         {

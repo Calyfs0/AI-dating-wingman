@@ -25,17 +25,37 @@ class SuggestedReplies extends Equatable {
     required this.natural,
     required this.playful,
     this.latestIncoming,
+    this.hook,
+    this.why,
   });
 
   final String natural;
   final String playful;
   final String? latestIncoming;
+  final String? hook;
+  final String? why;
 
   String forTone(ReplyTone tone) => switch (tone) {
         ReplyTone.natural => natural,
         ReplyTone.playful => playful,
       };
 
+  SuggestedReplies copyWith({
+    String? natural,
+    String? playful,
+    String? latestIncoming,
+    String? hook,
+    String? why,
+  }) {
+    return SuggestedReplies(
+      natural: natural ?? this.natural,
+      playful: playful ?? this.playful,
+      latestIncoming: latestIncoming ?? this.latestIncoming,
+      hook: hook ?? this.hook,
+      why: why ?? this.why,
+    );
+  }
+
   @override
-  List<Object?> get props => [natural, playful, latestIncoming];
+  List<Object?> get props => [natural, playful, latestIncoming, hook, why];
 }

@@ -46,6 +46,17 @@ class OpenersGeneratingScreen extends StatelessWidget {
                       color: AppColors.neonPink,
                     ),
                   ),
+                  const SizedBox(height: 28),
+                  TextButton(
+                    onPressed: controller.cancelGeneration,
+                    child: Text(
+                      'Cancel',
+                      style: text.labelLarge?.copyWith(
+                        color: const Color(0xFFB9AEC8),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

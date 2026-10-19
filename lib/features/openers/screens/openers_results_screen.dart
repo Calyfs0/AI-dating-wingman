@@ -30,7 +30,8 @@ class OpenersResultsScreen extends StatelessWidget {
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: controller.startOver,
+                      tooltip: 'Back',
+                      onPressed: controller.backFromResults,
                       icon: const Icon(
                         Icons.arrow_back_ios_new_rounded,
                         size: 18,
@@ -63,8 +64,30 @@ class OpenersResultsScreen extends StatelessWidget {
                         color: const Color(0xFFB9AEC8),
                       ),
                     ),
+                    if (openers.hook != null && openers.hook!.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        'Hook: ${openers.hook}',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.neonPink,
+                        ),
+                      ),
+                    ],
+                    if (openers.why != null && openers.why!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        openers.why!,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          color: const Color(0xFF9A8FA8),
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
-                    for (final tone in ReplyTone.values) ...[
+                    for (final tone in controller.orderedTones) ...[
                       _OpenerCard(
                         tone: tone,
                         message: openers.forTone(tone),

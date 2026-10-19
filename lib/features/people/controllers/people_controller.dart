@@ -8,7 +8,8 @@ import '../models/person.dart';
 class PeopleController extends ChangeNotifier {
   PeopleController();
 
-  static const _storageKey = 'wingman_people_v1';
+  static const _storageKey = 'gotchu_people_v1';
+  static const _legacyStorageKey = 'wingman_people_v1';
 
   final List<Person> _people = [];
   bool loaded = false;
@@ -25,7 +26,8 @@ class PeopleController extends ChangeNotifier {
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey);
+    final raw = prefs.getString(_storageKey) ??
+        prefs.getString(_legacyStorageKey);
     _people.clear();
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -34,6 +36,10 @@ class PeopleController extends ChangeNotifier {
           if (item is Map) {
             _people.add(Person.fromJson(Map<String, dynamic>.from(item)));
           }
+        }
+        if (prefs.containsKey(_legacyStorageKey)) {
+          await prefs.setString(_storageKey, raw);
+          await prefs.remove(_legacyStorageKey);
         }
       } catch (e) {
         debugPrint('people load: ${e.runtimeType}');

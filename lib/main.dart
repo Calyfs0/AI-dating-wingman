@@ -83,7 +83,7 @@ class _GotchuBootstrapState extends State<_GotchuBootstrap> {
 
   @override
   Widget build(BuildContext context) {
-    if (_ready) return const WingmanApp();
+    if (_ready) return const GotchuApp();
 
     if (_errorMessage != null) {
       return _BootstrapErrorApp(message: _errorMessage!);

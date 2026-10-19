@@ -92,9 +92,10 @@ class _SuggestedRepliesScreenState extends State<SuggestedRepliesScreen> {
                       child: Row(
                         children: [
                           IconButton(
+                            tooltip: 'Back',
                             onPressed: regenerating
                                 ? null
-                                : controller.startOver,
+                                : controller.backFromResults,
                             icon: const Icon(
                               Icons.arrow_back_ios_new_rounded,
                               size: 18,
@@ -138,7 +139,8 @@ class _SuggestedRepliesScreenState extends State<SuggestedRepliesScreen> {
                               ignoring: regenerating,
                               child: Column(
                                 children: [
-                                  for (final tone in ReplyTone.values) ...[
+                                  for (final tone
+                                      in controller.orderedTones) ...[
                                     _ReplyCard(
                                       tone: tone,
                                       message: replies.forTone(tone),

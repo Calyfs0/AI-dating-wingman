@@ -65,7 +65,7 @@ class _UploadScreenshotScreenState extends State<UploadScreenshotScreen> {
                     : ListView(
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                         children: [
-                          const WingmanBrandHeader(),
+                          const GotchuBrandHeader(),
                           const SizedBox(height: 16),
                           const MoodChipRow(),
                           const SizedBox(height: 22),

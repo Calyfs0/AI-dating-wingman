@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../../screenshot_reply/widgets/mockup_components.dart';
 import '../controllers/openers_flow_controller.dart';
+import '../widgets/openers_source_sheet.dart';
 
 class OpenersUploadScreen extends StatelessWidget {
   const OpenersUploadScreen({super.key});
@@ -43,7 +44,9 @@ class OpenersUploadScreen extends StatelessWidget {
                                   ),
                                 ),
                                 TextButton(
-                                  onPressed: c.isBusy ? null : c.clearImage,
+                                  onPressed: c.isBusy
+                                      ? null
+                                      : () => showOpenersSourceSheet(context),
                                   child: Text(
                                     'Change',
                                     style: GoogleFonts.plusJakartaSans(
@@ -65,6 +68,16 @@ class OpenersUploadScreen extends StatelessWidget {
                                       File(c.selectedImage!.path),
                                       fit: BoxFit.fitWidth,
                                       width: double.infinity,
+                                      errorBuilder: (_, __, ___) => const SizedBox(
+                                        height: 180,
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.broken_image_outlined,
+                                            color: Color(0xFF7E738F),
+                                            size: 40,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),

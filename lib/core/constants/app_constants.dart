@@ -1,6 +1,6 @@
 abstract final class AppConstants {
-  static const String appName = 'Wingman';
-  static const String tagline = 'Your private AI dating coach.';
+  static const String appName = 'Gotchu';
+  static const String tagline = 'Stuck on a reply? Gotchu.';
   static const String entitlementPro = 'pro';
   static const int maxScreenshots = 10;
   static const int maxScreenshotBytes = 8 * 1024 * 1024;

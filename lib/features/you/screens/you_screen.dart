@@ -6,8 +6,12 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../presentation/widgets/gotchu_logo.dart';
+import '../../history/controllers/history_controller.dart';
+import '../../history/widgets/history_sheet.dart';
+import '../../profile_audit/screens/profile_audit_screen.dart';
 import '../../screenshot_reply/models/suggested_replies.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
+import '../../usage/usage_controller.dart';
 import '../controllers/you_preferences_controller.dart';
 
 class YouScreen extends StatelessWidget {
@@ -16,6 +20,8 @@ class YouScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final you = context.watch<YouPreferencesController>();
+    final usage = context.watch<UsageController>();
+    final history = context.watch<HistoryController>();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -66,7 +72,9 @@ class YouScreen extends StatelessWidget {
                           const GotchuLogo(fontSize: 36),
                           const SizedBox(height: 2),
                           Text(
-                            'Free plan',
+                            usage.isPro
+                                ? 'Pro · ${usage.remaining} left today'
+                                : 'Free · ${usage.remaining}/${usage.dailyLimit} today',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               color: const Color(0xFFB9AEC8),
@@ -75,6 +83,66 @@ class YouScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              _GlassCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _YouLinkRow(
+                      icon: Icons.photo_library_outlined,
+                      iconColor: AppColors.neonPink.withValues(alpha: 0.9),
+                      title: 'Profile audit',
+                      subtitle: 'Scores, photo notes, bio rewrites',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const ProfileAuditScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    Divider(
+                      height: 1,
+                      color: AppColors.neonPink.withValues(alpha: 0.12),
+                    ),
+                    _YouLinkRow(
+                      icon: Icons.history_rounded,
+                      iconColor: const Color(0xFFB9AEC8),
+                      title: 'Recent history',
+                      subtitle: '${history.entries.length} on this device',
+                      onTap: () => showHistorySheet(context),
+                    ),
+                    if (history.entries.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: () async {
+                            await history.clear();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Local history cleared',
+                                    style: GoogleFonts.plusJakartaSans(),
+                                  ),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          },
+                          child: Text(
+                            'Clear history',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: AppColors.danger,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -167,7 +235,7 @@ class YouScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Screenshots stay on device — never stored on our servers.',
+                            'Screenshots are sent briefly for analysis, then discarded — we don’t save them to your account.',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               color: const Color(0xFFB9AEC8),
@@ -182,6 +250,67 @@ class YouScreen extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               _ProCard(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _YouLinkRow extends StatelessWidget {
+  const _YouLinkRow({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+          child: Row(
+            children: [
+              Icon(icon, color: iconColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: const Color(0xFF9A8FA8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFFB9AEC8),
+              ),
             ],
           ),
         ),
@@ -317,7 +446,7 @@ class _ProCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Unlock unlimited replies, openers, and deeper coaching.',
+              'Free plan includes a daily Reply / Openers / Profile audit budget. Practice is free rehearsal and doesn’t use those credits.',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 color: const Color(0xFFD4C8DE),
@@ -338,7 +467,7 @@ class _ProCard extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Pro coming soon — you’re on the free plan for now.',
+                          'You’re on the Pro waitlist. Limits stay free until Pro is live.',
                           style: GoogleFonts.plusJakartaSans(),
                         ),
                         behavior: SnackBarBehavior.floating,
@@ -349,7 +478,7 @@ class _ProCard extends StatelessWidget {
                     height: 48,
                     child: Center(
                       child: Text(
-                        'Unlock unlimited replies',
+                        'Join the Pro waitlist',
                         style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.w700,
                           color: Colors.white,

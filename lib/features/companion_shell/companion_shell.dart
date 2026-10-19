@@ -7,14 +7,15 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../openers/controllers/openers_flow_controller.dart';
 import '../openers/screens/openers_flow_shell.dart';
-import '../people/controllers/people_controller.dart';
 import '../people/screens/people_screen.dart';
+import '../practice/controllers/practice_controller.dart';
+import '../practice/screens/practice_screen.dart';
+// PracticePhase is on the controller file.
 import '../screenshot_reply/controllers/reply_flow_controller.dart';
 import '../screenshot_reply/screens/reply_flow_shell.dart';
-import '../you/controllers/you_preferences_controller.dart';
 import '../you/screens/you_screen.dart';
 
-/// Root shell: Reply · Openers · People · You
+/// Root shell: Reply · Openers · Practice · People · You
 class CompanionShell extends StatefulWidget {
   const CompanionShell({super.key});
 
@@ -34,6 +35,7 @@ class _CompanionShellState extends State<CompanionShell> {
         children: const [
           ReplyFlowShell(),
           OpenersFlowShell(),
+          PracticeScreen(),
           PeopleScreen(),
           YouScreen(),
         ],
@@ -59,20 +61,27 @@ class CompanionNavBar extends StatelessWidget {
   static const _items = [
     (Icons.auto_awesome_rounded, 'Reply'),
     (Icons.waving_hand_outlined, 'Openers'),
+    (Icons.fitness_center_rounded, 'Practice'),
     (Icons.favorite_border_rounded, 'People'),
     (Icons.person_outline_rounded, 'You'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    // Hide nav while Reply/Openers are mid-generation for a cleaner loading beat.
     final replyBusy = context.watch<ReplyFlowController>().phase ==
         ReplyFlowPhase.generating;
     final openersBusy =
         context.watch<OpenersFlowController>().phase == OpenersPhase.generating;
+    final practiceBusy = context.watch<PracticeController>().isBusy &&
+        context.watch<PracticeController>().phase ==
+            PracticePhase.session;
     if ((currentIndex == 0 && replyBusy) ||
-        (currentIndex == 1 && openersBusy)) {
-      return const SizedBox.shrink();
+        (currentIndex == 1 && openersBusy) ||
+        (currentIndex == 2 && practiceBusy)) {
+      // Keep nav for practice (user may end); hide for reply/openers generate.
+      if (currentIndex != 2) {
+        return const SizedBox.shrink();
+      }
     }
 
     return ClipRect(
@@ -133,49 +142,20 @@ class _NavTap extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 22, color: color),
-          const SizedBox(height: 4),
+          Icon(icon, size: 20, color: color),
+          const SizedBox(height: 3),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               color: color,
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Registers companion-scoped controllers for the shell tree.
-class CompanionProviders extends StatelessWidget {
-  const CompanionProviders({
-    super.key,
-    required this.reply,
-    required this.openers,
-    required this.people,
-    required this.you,
-    required this.child,
-  });
-
-  final ReplyFlowController reply;
-  final OpenersFlowController openers;
-  final PeopleController people;
-  final YouPreferencesController you;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: reply),
-        ChangeNotifierProvider.value(value: openers),
-        ChangeNotifierProvider.value(value: people),
-        ChangeNotifierProvider.value(value: you),
-      ],
-      child: child,
     );
   }
 }

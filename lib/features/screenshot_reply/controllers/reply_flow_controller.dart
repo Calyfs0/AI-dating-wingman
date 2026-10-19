@@ -3,6 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/errors/app_exception.dart';
+import '../../history/controllers/history_controller.dart';
+import '../../history/models/history_entry.dart';
+import '../../people/models/person.dart';
+import '../../usage/usage_controller.dart';
+import '../models/generation_prefs.dart';
 import '../models/reply_generation_result.dart';
 import '../models/suggested_replies.dart';
 import '../services/generate_replies_service.dart';
@@ -11,11 +16,22 @@ enum ReplyFlowPhase { upload, textEntry, generating, results }
 
 enum ReplyInputSource { screenshot, text }
 
-/// In-memory only — nothing is persisted or linked across chats.
+/// In-memory only — nothing is persisted or linked across chats
+/// (aside from optional local history snapshots).
 class ReplyFlowController extends ChangeNotifier {
-  ReplyFlowController(this._service);
+  ReplyFlowController(
+    this._service, {
+    GenerationPrefs Function()? prefsOf,
+    HistoryController? history,
+    UsageController? usage,
+  })  : _prefsOf = prefsOf,
+        _history = history,
+        _usage = usage;
 
   final GenerateRepliesService _service;
+  final GenerationPrefs Function()? _prefsOf;
+  final HistoryController? _history;
+  final UsageController? _usage;
   final ImagePicker _picker = ImagePicker();
 
   ReplyFlowPhase phase = ReplyFlowPhase.upload;
@@ -30,11 +46,37 @@ class ReplyFlowController extends ChangeNotifier {
   bool isBusy = false;
   String loadingMessage = 'Reading the conversation…';
   bool copiedConfirmation = false;
+  Person? attachedPerson;
+
+  /// Tone to show first on results (from You prefs at generate time).
+  ReplyTone preferredVibe = ReplyTone.natural;
+
+  int _generationToken = 0;
+
+  GenerationPrefs get _prefs {
+    final base = _prefsOf?.call() ?? const GenerationPrefs();
+    final person = attachedPerson;
+    if (person == null) return base;
+    return base.withPerson(name: person.name, note: person.note);
+  }
+
+  void setAttachedPerson(Person? person) {
+    attachedPerson = person;
+    notifyListeners();
+  }
 
   bool get hasImage => selectedImage != null;
   bool get canGenerate => hasImage && !isBusy;
   bool get hasNoReplyNotice =>
       noReplyTitle != null && noReplyMessage != null;
+
+  List<ReplyTone> get orderedTones {
+    final preferred = preferredVibe;
+    return [
+      preferred,
+      ...ReplyTone.values.where((t) => t != preferred),
+    ];
+  }
 
   /// Wipe session fields so the next chat cannot inherit the last one.
   void _resetChatState({
@@ -132,9 +174,40 @@ class ReplyFlowController extends ChangeNotifier {
 
   /// Back to the hub — fully isolated from the previous chat.
   void startOver() {
+    _generationToken++;
+    isBusy = false;
     _resetChatState(clearImage: true, clearTyped: true, clearReplies: true);
     lastSource = ReplyInputSource.screenshot;
     phase = ReplyFlowPhase.upload;
+    notifyListeners();
+  }
+
+  /// Leave results without wiping the screenshot / typed draft.
+  void backFromResults() {
+    _generationToken++;
+    isBusy = false;
+    replies = null;
+    errorMessage = null;
+    noReplyTitle = null;
+    noReplyMessage = null;
+    copiedConfirmation = false;
+    if (lastSource == ReplyInputSource.text) {
+      phase = ReplyFlowPhase.textEntry;
+    } else {
+      phase = ReplyFlowPhase.upload;
+    }
+    notifyListeners();
+  }
+
+  /// Abort an in-flight generate and return to the prior input screen.
+  void cancelGeneration() {
+    if (phase != ReplyFlowPhase.generating) return;
+    _generationToken++;
+    isBusy = false;
+    errorMessage = null;
+    phase = lastSource == ReplyInputSource.text
+        ? ReplyFlowPhase.textEntry
+        : ReplyFlowPhase.upload;
     notifyListeners();
   }
 
@@ -148,9 +221,14 @@ class ReplyFlowController extends ChangeNotifier {
     // Photo chat must not send leftover typed context later via edit→regenerate.
     typedMessage = '';
     typedContext = '';
+    final prefs = _prefs;
+    preferredVibe = prefs.preferredVibe;
     await _runGeneration(
       source: ReplyInputSource.screenshot,
-      work: () => _service.generateFromScreenshot(image.path),
+      work: () => _service.generateFromScreenshot(
+        image.path,
+        prefs: prefs,
+      ),
     );
   }
 
@@ -168,11 +246,14 @@ class ReplyFlowController extends ChangeNotifier {
     selectedImage = null;
     typedMessage = trimmed;
     typedContext = context.trim();
+    final prefs = _prefs;
+    preferredVibe = prefs.preferredVibe;
     await _runGeneration(
       source: ReplyInputSource.text,
       work: () => _service.generateFromMessage(
         message: typedMessage,
         context: typedContext.isEmpty ? null : typedContext,
+        prefs: prefs,
       ),
     );
   }
@@ -183,6 +264,14 @@ class ReplyFlowController extends ChangeNotifier {
   }) async {
     if (isBusy) return;
 
+    final usage = _usage;
+    if (usage != null && !await usage.tryConsume()) {
+      errorMessage = usage.limitMessage;
+      notifyListeners();
+      return;
+    }
+
+    final token = ++_generationToken;
     isBusy = true;
     errorMessage = null;
     noReplyTitle = null;
@@ -195,23 +284,35 @@ class ReplyFlowController extends ChangeNotifier {
     notifyListeners();
 
     Future<void>.delayed(const Duration(milliseconds: 900), () {
-      if (!isBusy || phase != ReplyFlowPhase.generating) return;
+      if (token != _generationToken || phase != ReplyFlowPhase.generating) {
+        return;
+      }
       loadingMessage = 'Finding the right words…';
       notifyListeners();
     });
 
     Future<void>.delayed(const Duration(milliseconds: 1800), () {
-      if (!isBusy || phase != ReplyFlowPhase.generating) return;
+      if (token != _generationToken || phase != ReplyFlowPhase.generating) {
+        return;
+      }
       loadingMessage = 'Turning tension into text…';
       notifyListeners();
     });
 
     try {
       final result = await work();
+      if (token != _generationToken) return;
       switch (result) {
         case RepliesReady(:final replies):
           this.replies = replies;
           phase = ReplyFlowPhase.results;
+          final person = attachedPerson;
+          await _history?.addFromReplies(
+            kind: HistoryKind.reply,
+            replies: replies,
+            personId: person?.id,
+            personName: person?.name,
+          );
         case NoReplyNeeded(:final title, :final message):
           replies = null;
           noReplyTitle = title;
@@ -221,18 +322,22 @@ class ReplyFlowController extends ChangeNotifier {
               : ReplyFlowPhase.upload;
       }
     } on AppException catch (e) {
+      if (token != _generationToken) return;
       errorMessage = e.message;
       phase = source == ReplyInputSource.text
           ? ReplyFlowPhase.textEntry
           : ReplyFlowPhase.upload;
     } catch (e) {
+      if (token != _generationToken) return;
       errorMessage = AppExceptionMapper.map(e).message;
       phase = source == ReplyInputSource.text
           ? ReplyFlowPhase.textEntry
           : ReplyFlowPhase.upload;
     } finally {
-      isBusy = false;
-      notifyListeners();
+      if (token == _generationToken) {
+        isBusy = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -278,6 +383,11 @@ class ReplyFlowController extends ChangeNotifier {
       lastSource = ReplyInputSource.text;
     }
 
+    final token = ++_generationToken;
+    final prefs = _prefs;
+    preferredVibe = prefs.preferredVibe;
+    final previousReplies = replies;
+
     isBusy = true;
     errorMessage = null;
     noReplyTitle = null;
@@ -291,10 +401,15 @@ class ReplyFlowController extends ChangeNotifier {
         outcome = await _service.generateFromScreenshot(
           image.path,
           latestMessageOverride: trimmed,
+          prefs: prefs,
         );
       } else {
-        outcome = await _service.generateFromMessage(message: typedMessage);
+        outcome = await _service.generateFromMessage(
+          message: typedMessage,
+          prefs: prefs,
+        );
       }
+      if (token != _generationToken) return;
       switch (outcome) {
         case RepliesReady(:final replies):
           this.replies = SuggestedReplies(
@@ -304,26 +419,37 @@ class ReplyFlowController extends ChangeNotifier {
           );
           phase = ReplyFlowPhase.results;
         case NoReplyNeeded(:final title, :final message):
-          replies = null;
           noReplyTitle = title;
           noReplyMessage = message;
-          phase = keepScreenshot
-              ? ReplyFlowPhase.upload
-              : ReplyFlowPhase.textEntry;
+          // Keep prior cards when possible so regenerate doesn't feel like a crash.
+          if (previousReplies != null) {
+            replies = previousReplies;
+            phase = ReplyFlowPhase.results;
+          } else {
+            replies = null;
+            phase = keepScreenshot
+                ? ReplyFlowPhase.upload
+                : ReplyFlowPhase.textEntry;
+          }
       }
     } on AppException catch (e) {
+      if (token != _generationToken) return;
       errorMessage = e.message;
     } catch (e) {
+      if (token != _generationToken) return;
       errorMessage = AppExceptionMapper.map(e).message;
     } finally {
-      isBusy = false;
-      notifyListeners();
+      if (token == _generationToken) {
+        isBusy = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<bool> copyReply(String text) async {
     try {
       await Clipboard.setData(ClipboardData(text: text));
+      HapticFeedback.lightImpact();
       copiedConfirmation = true;
       notifyListeners();
       Future<void>.delayed(const Duration(seconds: 2), () {

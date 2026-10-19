@@ -1,0 +1,22 @@
+---
+description: Always deploy Supabase Edge Functions after changing them
+globs: supabase/functions/**
+alwaysApply: true
+---
+
+# Deploy Edge Functions
+
+Whenever you create or edit anything under `supabase/functions/` (including `_shared/`), deploy the affected function(s) before finishing the task. Do not leave deploy as a follow-up for the user.
+
+## How
+
+From the repo root:
+
+```bash
+npx supabase functions deploy <function-name> --no-verify-jwt
+```
+
+- Deploy every function whose code or shared imports you changed (e.g. `generate-replies`).
+- If `_shared/` changed, redeploy all functions that import those shared modules.
+- If deploy needs approval or network permissions, request them and complete the deploy in the same turn.
+- Confirm success in your reply (function name + that it deployed). Do not only say “remember to deploy.”

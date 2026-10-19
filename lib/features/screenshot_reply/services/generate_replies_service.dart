@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 import '../../../core/errors/app_exception.dart';
+import '../models/generation_prefs.dart';
 import '../models/reply_generation_result.dart';
 import '../parsers/reply_response_parser.dart';
 
@@ -13,14 +14,19 @@ abstract class GenerateRepliesService {
   Future<ReplyGenerationResult> generateFromScreenshot(
     String imagePath, {
     String? latestMessageOverride,
+    GenerationPrefs prefs = const GenerationPrefs(),
   });
 
   Future<ReplyGenerationResult> generateFromMessage({
     required String message,
     String? context,
+    GenerationPrefs prefs = const GenerationPrefs(),
   });
 
-  Future<ReplyGenerationResult> generateOpeners(String imagePath);
+  Future<ReplyGenerationResult> generateOpeners(
+    String imagePath, {
+    GenerationPrefs prefs = const GenerationPrefs(),
+  });
 }
 
 class SupabaseGenerateRepliesService implements GenerateRepliesService {
@@ -40,6 +46,7 @@ class SupabaseGenerateRepliesService implements GenerateRepliesService {
   Future<ReplyGenerationResult> generateFromScreenshot(
     String imagePath, {
     String? latestMessageOverride,
+    GenerationPrefs prefs = const GenerationPrefs(),
   }) async {
     final dataUrl = await _encodeImage(imagePath);
     if (dataUrl == null) {
@@ -47,7 +54,10 @@ class SupabaseGenerateRepliesService implements GenerateRepliesService {
         "Couldn't read that image. Try another screenshot.",
       );
     }
-    final body = <String, dynamic>{'image': dataUrl};
+    final body = <String, dynamic>{
+      'image': dataUrl,
+      ...prefs.toJson(),
+    };
     final override = latestMessageOverride?.trim();
     if (override != null && override.isNotEmpty) {
       body['message'] = override;
@@ -59,6 +69,7 @@ class SupabaseGenerateRepliesService implements GenerateRepliesService {
   Future<ReplyGenerationResult> generateFromMessage({
     required String message,
     String? context,
+    GenerationPrefs prefs = const GenerationPrefs(),
   }) async {
     final trimmed = message.trim();
     if (trimmed.isEmpty) {
@@ -66,7 +77,10 @@ class SupabaseGenerateRepliesService implements GenerateRepliesService {
         'Enter the message you received to continue.',
       );
     }
-    final body = <String, dynamic>{'message': trimmed};
+    final body = <String, dynamic>{
+      'message': trimmed,
+      ...prefs.toJson(),
+    };
     final ctx = context?.trim();
     if (ctx != null && ctx.isNotEmpty) {
       body['context'] = ctx;
@@ -75,7 +89,10 @@ class SupabaseGenerateRepliesService implements GenerateRepliesService {
   }
 
   @override
-  Future<ReplyGenerationResult> generateOpeners(String imagePath) async {
+  Future<ReplyGenerationResult> generateOpeners(
+    String imagePath, {
+    GenerationPrefs prefs = const GenerationPrefs(),
+  }) async {
     final dataUrl = await _encodeImage(imagePath);
     if (dataUrl == null) {
       throw const AnalysisException(
@@ -85,6 +102,7 @@ class SupabaseGenerateRepliesService implements GenerateRepliesService {
     return _invoke({
       'image': dataUrl,
       'mode': 'openers',
+      ...prefs.toJson(),
     });
   }
 
@@ -143,7 +161,7 @@ class SupabaseGenerateRepliesService implements GenerateRepliesService {
         : lower.endsWith('.webp')
             ? 'image/webp'
             : 'image/jpeg';
-    return 'data:$mime;base64,${base64Encode(bytes)}';
+    return compute(_encodeDataUrl, (Uint8List.fromList(bytes), mime));
   }
 
   Map<String, dynamic> _asMap(dynamic data) {
@@ -200,4 +218,9 @@ class SupabaseGenerateRepliesService implements GenerateRepliesService {
     }
     return _mapHttpError(e.status, data);
   }
+}
+
+String _encodeDataUrl((Uint8List bytes, String mime) args) {
+  final (bytes, mime) = args;
+  return 'data:$mime;base64,${base64Encode(bytes)}';
 }
