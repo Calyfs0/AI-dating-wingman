@@ -1,48 +1,32 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../openers/controllers/openers_flow_controller.dart';
-import '../openers/screens/openers_flow_shell.dart';
-import '../people/screens/people_screen.dart';
-import '../practice/controllers/practice_controller.dart';
-import '../practice/screens/practice_screen.dart';
-// PracticePhase is on the controller file.
 import '../screenshot_reply/controllers/reply_flow_controller.dart';
-import '../screenshot_reply/screens/reply_flow_shell.dart';
-import '../you/screens/you_screen.dart';
 
-/// Root shell: Reply · Openers · Practice · People · You
-class CompanionShell extends StatefulWidget {
-  const CompanionShell({super.key});
+/// Root shell: Reply · Openers · People · You
+/// Practice lives under You → /practice (secondary).
+class CompanionShell extends StatelessWidget {
+  const CompanionShell({super.key, required this.navigationShell});
 
-  @override
-  State<CompanionShell> createState() => _CompanionShellState();
-}
-
-class _CompanionShellState extends State<CompanionShell> {
-  int _index = 0;
+  final StatefulNavigationShell navigationShell;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: IndexedStack(
-        index: _index,
-        children: const [
-          ReplyFlowShell(),
-          OpenersFlowShell(),
-          PracticeScreen(),
-          PeopleScreen(),
-          YouScreen(),
-        ],
-      ),
+      body: navigationShell,
       bottomNavigationBar: CompanionNavBar(
-        currentIndex: _index,
-        onTap: (i) => setState(() => _index = i),
+        currentIndex: navigationShell.currentIndex,
+        onTap: (i) => navigationShell.goBranch(
+          i,
+          initialLocation: i == navigationShell.currentIndex,
+        ),
       ),
     );
   }
@@ -58,10 +42,10 @@ class CompanionNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
+  /// 0 Reply · 1 Openers · 2 People · 3 You
   static const _items = [
     (Icons.auto_awesome_rounded, 'Reply'),
     (Icons.waving_hand_outlined, 'Openers'),
-    (Icons.fitness_center_rounded, 'Practice'),
     (Icons.favorite_border_rounded, 'People'),
     (Icons.person_outline_rounded, 'You'),
   ];
@@ -72,16 +56,9 @@ class CompanionNavBar extends StatelessWidget {
         ReplyFlowPhase.generating;
     final openersBusy =
         context.watch<OpenersFlowController>().phase == OpenersPhase.generating;
-    final practiceBusy = context.watch<PracticeController>().isBusy &&
-        context.watch<PracticeController>().phase ==
-            PracticePhase.session;
-    if ((currentIndex == 0 && replyBusy) ||
-        (currentIndex == 1 && openersBusy) ||
-        (currentIndex == 2 && practiceBusy)) {
-      // Keep nav for practice (user may end); hide for reply/openers generate.
-      if (currentIndex != 2) {
-        return const SizedBox.shrink();
-      }
+    // Hide nav during core generate so the loading screen owns attention.
+    if ((currentIndex == 0 && replyBusy) || (currentIndex == 1 && openersBusy)) {
+      return const SizedBox.shrink();
     }
 
     return ClipRect(
@@ -98,13 +75,13 @@ class CompanionNavBar extends StatelessWidget {
           ),
           child: SafeArea(
             top: false,
-            child: SizedBox(
-              height: 62,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
               child: Row(
                 children: [
                   for (var i = 0; i < _items.length; i++)
                     Expanded(
-                      child: _NavTap(
+                      child: _NavItem(
                         icon: _items[i].$1,
                         label: _items[i].$2,
                         selected: currentIndex == i,
@@ -121,8 +98,8 @@ class CompanionNavBar extends StatelessWidget {
   }
 }
 
-class _NavTap extends StatelessWidget {
-  const _NavTap({
+class _NavItem extends StatelessWidget {
+  const _NavItem({
     required this.icon,
     required this.label,
     required this.selected,
@@ -136,25 +113,29 @@ class _NavTap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.neonPink : const Color(0xFF7E738F);
+    final color = selected ? AppColors.neonPink : const Color(0xFF8A8098);
     return InkWell(
       onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 20, color: color),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 10,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: color,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 22, color: color),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: color,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -9,8 +10,28 @@ import '../../screenshot_reply/widgets/mockup_components.dart';
 import '../controllers/practice_controller.dart';
 import '../models/practice_models.dart';
 
-class PracticeScreen extends StatelessWidget {
+class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key});
+
+  @override
+  State<PracticeScreen> createState() => _PracticeScreenState();
+}
+
+class _PracticeScreenState extends State<PracticeScreen> {
+  late final PracticeController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = context.read<PracticeController>();
+  }
+
+  @override
+  void dispose() {
+    // Keep resumable session on pop — only clear a stuck in-flight turn.
+    _controller.abandonInFlight();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,9 +59,23 @@ class _PersonasView extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.watch<PracticeController>();
     final personas = c.visiblePersonas;
+    final canPop = context.canPop();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
       children: [
+        if (canPop)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              tooltip: 'Back',
+              onPressed: () => context.pop(),
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
+            ),
+          ),
         Text(
           'Practice',
           style: GoogleFonts.plusJakartaSans(
@@ -334,7 +369,17 @@ class _TopicsView extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 48),
+            TextButton(
+              onPressed: c.resetToIdle,
+              child: Text(
+                'New',
+                style: GoogleFonts.plusJakartaSans(
+                  color: const Color(0xFFB9AEC8),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -479,7 +524,12 @@ class _SessionViewState extends State<_SessionView> {
                 ),
               ),
               TextButton(
-                onPressed: c.isBusy ? null : c.endEarly,
+                onPressed: c.isBusy
+                    ? null
+                    : () {
+                        HapticFeedback.selectionClick();
+                        c.endSession();
+                      },
                 child: Text(
                   'End',
                   style: GoogleFonts.plusJakartaSans(
@@ -687,10 +737,23 @@ class _FeedbackView extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         NeonGenerateButton(
-          label: 'Try another scene',
-          onPressed: c.backToTopics,
+          label: 'Done — new session',
+          onPressed: () {
+            HapticFeedback.mediumImpact();
+            c.resetToIdle();
+          },
         ),
         const SizedBox(height: 10),
+        TextButton(
+          onPressed: c.backToTopics,
+          child: Text(
+            'Try another scene',
+            style: GoogleFonts.plusJakartaSans(
+              color: const Color(0xFFB9AEC8),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
         TextButton(
           onPressed: c.backToPersonas,
           child: Text(

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 import '../../../core/errors/app_exception.dart';
+import '../../../core/errors/edge_function_errors.dart';
 import '../models/profile_audit_result.dart';
 
 class ProfileAuditService {
@@ -41,10 +42,7 @@ class ProfileAuditService {
 
       final data = _asMap(response.data);
       if (response.status >= 400) {
-        throw AnalysisException(
-          data['error']?.toString() ??
-              "Couldn't audit this profile. Please try again.",
-        );
+        throw mapEdgeHttpError(response.status, data);
       }
 
       final notes = data['photoNotes'];
@@ -67,6 +65,8 @@ class ProfileAuditService {
       throw const TimeoutException();
     } on AppException {
       rethrow;
+    } on FunctionException catch (e) {
+      throw mapFunctionException(e);
     } catch (e, st) {
       debugPrint('profile-audit failed: ${e.runtimeType}\n$st');
       throw AppExceptionMapper.map(e);

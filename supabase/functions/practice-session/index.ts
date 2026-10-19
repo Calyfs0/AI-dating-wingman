@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
+import { assertSafeUserText, SAFETY_RULES } from "../_shared/safety.ts";
 
 const TOPIC_LABELS: Record<string, string> = {
   firstMessage: "they just matched — user is sending / continuing the first texts",
@@ -89,6 +90,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    const safety = await assertSafeUserText(message);
+    if (!safety.ok) {
+      return jsonResponse(
+        { error: safety.message, code: safety.code },
+        422,
+      );
+    }
+
     const history = Array.isArray(body.history) ? body.history : [];
     const userTurns =
       history.filter((h: { role?: string }) => h?.role === "user").length + 1;
@@ -116,6 +125,9 @@ CRITICAL:
 - React to what THEY just said like a real match would.
 - 1–2 short lines max. Fragments OK. Emoji only if it fits this persona.
 - After about 3–4 user messages, or if they clearly land a plan / close the loop, end the scene.
+
+${SAFETY_RULES}
+- If their message is clearly harmful / non-consensual, end the scene (done:true) with a short in-character deflection and feedback that notes the line crossed — still no lecture.
 
 Return JSON only:
 Continuing: {"personaLine":"${personaName.toLowerCase()} text","done":false}

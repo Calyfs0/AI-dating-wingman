@@ -1,6 +1,19 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
-import { responsesJson } from "../_shared/openai_responses.ts";
+import { corsHeaders, jsonResponse, sseData, sseHeaders } from "../_shared/cors.ts";
+import {
+  extractPartialReplyFields,
+  responsesJson,
+  responsesJsonTextStream,
+} from "../_shared/openai_responses.ts";
+import {
+  assertSafeUserText,
+  SAFETY_RULES,
+} from "../_shared/safety.ts";
+import {
+  assertGenerationAllowed,
+  attachUsage,
+  recordGeneration,
+} from "../_shared/usage.ts";
 
 const MAX_IMAGE_CHARS = 7_500_000;
 const MAX_MESSAGE_CHARS = 4000;
@@ -259,16 +272,27 @@ const TONE_RULES = `Tone requirements (must feel meaningfully different; BOTH st
 const SCREENSHOT_INSTRUCTIONS = `You are Gotchu, a dating reply companion that texts like a real person.
 
 You receive ONE screenshot of a messaging conversation.
-Your job:
-1. Read the visible chat text carefully.
-2. Decide which bubbles belong to the USER (person seeking a reply) vs the OTHER person.
-   Prefer: right-aligned / outgoing / green (WhatsApp) / blue (iMessage) bubbles = USER.
-   Prefer: left-aligned / incoming / gray-white bubbles = OTHER.
-3. Find the chronologically latest message in the screenshot.
-4. If that latest message is from the USER (they already replied, said goodnight, thanks, ok, etc.):
-   Do NOT invent replies. Return needs_reply:false with a short warm title + message.
-   Examples: closed with goodnight, already answered, ball is in their court.
-5. Only if the latest message is from the OTHER person: write exactly two distinct replies.
+Your job — follow this GATE in order (do not skip):
+
+1. Read every visible bubble carefully (top → bottom).
+2. Label each bubble USER vs OTHER using layout, not vibes:
+   - USER (the person seeking a reply from Gotchu) = right-aligned / outgoing.
+     WhatsApp: green bubbles. iMessage: blue. Telegram/Signal: usually right + accent.
+   - OTHER = left-aligned / incoming (gray / white / muted bubbles).
+   Never treat a right-aligned bubble as OTHER. Never treat a left-aligned bubble as USER.
+3. Find the chronologically LATEST message = the bottom-most chat bubble above the composer.
+   Ignore keyboard, gallery strip, timestamps alone, and wallpaper.
+4. GATE — if that latest bubble is from USER:
+   - needs_reply MUST be false.
+   - Do NOT write natural/playful replies. Do NOT invent a follow-up.
+   - There is no pressure to reply when they already handled it well (goodnight, thanks, ok, "its cool", ball in their court, etc.).
+   - Return latest_speaker:"user" and latest_outgoing as that exact text.
+5. Only if the latest bubble is from OTHER: needs_reply true, latest_speaker:"other",
+   set latest_incoming to THAT exact OTHER message (not an earlier USER line), then write two replies.
+
+Common failure to avoid:
+- Picking an earlier USER tease ("don't say something you'll regret") as latest_incoming while a later USER goodnight exists — WRONG. Return needs_reply:false.
+- Generating replies "as if" you are the OTHER person — WRONG. You only draft what USER can send next.
 
 ${SESSION_RULES}
 
@@ -279,6 +303,8 @@ ${VOICE_RULES}
 ${EMPATHY_RULES}
 
 ${TONE_RULES}
+
+${SAFETY_RULES}
 
 Hard rules:
 - Never invent conversation details that are not visible.
@@ -291,14 +317,16 @@ Return JSON only — one of:
 {
   "readable": true,
   "needs_reply": false,
+  "latest_speaker": "user",
   "title": "You're all set",
   "message": "Short sweet note that they already sent the last text / nothing to reply to.",
-  "latest_outgoing": "..."
+  "latest_outgoing": "exact text of their last sent bubble"
 }
 or {
   "readable": true,
   "needs_reply": true,
-  "latest_incoming": "...",
+  "latest_speaker": "other",
+  "latest_incoming": "exact text of the OTHER person's latest bubble",
   "language": "english|hinglish|hindi|tamil|other",
   "replies": { "natural": "...", "playful": "..." }
 }
@@ -329,6 +357,8 @@ Voice — sound like a real first text, never a pickup-line generator:
 Tone requirements (must feel meaningfully different):
 - natural: Easy, warm first message grounded in a real hook.
 - playful: Soft tease tied to a specific prompt — never mean.
+
+${SAFETY_RULES}
 
 Hard rules:
 - Never invent profile details that are not visible.
@@ -364,6 +394,8 @@ ${EMPATHY_RULES}
 
 ${TONE_RULES}
 
+${SAFETY_RULES}
+
 Hard rules:
 - Never invent conversation history that was not provided.
 - Avoid cheesy pickup lines, emoji spam, cold/detached one-liners, and robotic/formal phrasing.
@@ -393,12 +425,20 @@ function validateReplies(
     return { ok: false as const, status: 422, body: { error: message, code: "unreadable" } };
   }
 
+  const latestSpeaker = String(ai.latest_speaker ?? "")
+    .trim()
+    .toLowerCase();
+  // Prefer explicit speaker label; also honor needs_reply:false from the model.
+  const userAlreadyReplied = latestSpeaker === "user" ||
+    ai.needs_reply === false;
+
   // User already sent the latest message — nothing to suggest.
-  if (ai.needs_reply === false) {
+  if (userAlreadyReplied) {
     const title = String(ai.title ?? "").trim() || "You're all set";
     const message = String(ai.message ?? "").trim() ||
       "You already sent the last message — nothing to reply to right now. Let them come back to you.";
-    const latestOutgoing = String(ai.latest_outgoing ?? "").trim();
+    const latestOutgoing = String(ai.latest_outgoing ?? "").trim() ||
+      String(ai.latest_incoming ?? "").trim();
     return {
       ok: true as const,
       body: {
@@ -532,10 +572,23 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Unauthorized", code: "auth" }, 401);
     }
 
+    // Server-side daily quota (authoritative). Client UsageController is UX only.
+    const usageGate = await assertGenerationAllowed(supabase, user.id);
+    if (!usageGate.ok) return usageGate.response;
+
     const body = await req.json();
     const image = normalizeImageDataUrl(String(body.image ?? ""));
     const mode = String(body.mode ?? "").trim().toLowerCase();
     const isOpeners = mode === "openers";
+    const earlyMessage = String(body.message ?? "").trim().slice(0, MAX_MESSAGE_CHARS);
+    const earlyContext = String(body.context ?? "").trim().slice(0, MAX_CONTEXT_CHARS);
+    const safety = await assertSafeUserText(earlyMessage, earlyContext, body.personNote);
+    if (!safety.ok) {
+      return jsonResponse(
+        { error: safety.message, code: safety.code },
+        422,
+      );
+    }
     const preferredVibe = String(body.preferredVibe ?? "natural")
       .trim()
       .toLowerCase() === "playful"
@@ -614,11 +667,16 @@ Deno.serve(async (req) => {
           "Return the JSON object from your instructions. Set latest_incoming to the provided latest message.\n\n" +
           prefsHint
         : "This is a brand-new isolated request — ignore any notion of prior chats. " +
-          "Analyze this chat screenshot. Focus on the latest incoming message and visible prior context. " +
-          "Match language/script for BOTH replies (natural and playful) " +
-          "(Tamil→Tamil, Hindi→Hindi, Hinglish→Hinglish, English→English, or any other language as written). " +
-          "Write casual texting-style replies: warm/human, never formal or therapy-speak. Do not invent the user's feelings. " +
-          "Return the JSON object from your instructions.\n\n" +
+          "Analyze this chat screenshot. " +
+          "CRITICAL GATE first: identify the bottom-most bubble. " +
+          "Right-aligned/green/blue = USER. Left-aligned/gray-white = OTHER. " +
+          "If the latest bubble is USER (e.g. goodnight, thanks, its cool, already answered), " +
+          "return needs_reply:false + latest_speaker:\"user\" + latest_outgoing — do NOT invent replies. " +
+          "Only if the latest bubble is OTHER: needs_reply:true, latest_speaker:\"other\", " +
+          "set latest_incoming to that OTHER text (never a USER line), then write two casual replies " +
+          "matching language/script (Tamil→Tamil, Hindi→Hindi, Hinglish→Hinglish, English→English). " +
+          "Warm/human, never formal or therapy-speak. Do not invent the user's feelings. " +
+          "Return the JSON object from your instructions. Emit latest_speaker (and latest_incoming or latest_outgoing) before replies.\n\n" +
           prefsHint;
     } else if (message) {
       instructions = TEXT_INSTRUCTIONS;
@@ -636,6 +694,154 @@ Deno.serve(async (req) => {
       );
     }
 
+    const wantStream = body.stream === true;
+
+    // ---- Streaming path (SSE): progressive natural/playful text, then done ----
+    if (wantStream) {
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          const enc = new TextEncoder();
+          const send = (payload: unknown) => {
+            controller.enqueue(enc.encode(sseData(payload)));
+          };
+          try {
+            let fullText = "";
+            let lastPartial = { natural: "", playful: "", latestIncoming: "" };
+            for await (
+              const chunk of responsesJsonTextStream({
+                instructions,
+                userText: baseUserText,
+                imageDataUrl,
+                model: "gpt-4o-mini",
+                temperature: 0.85,
+              })
+            ) {
+              fullText = chunk.full;
+              const partial = extractPartialReplyFields(fullText);
+              if (
+                partial.natural !== lastPartial.natural ||
+                partial.playful !== lastPartial.playful ||
+                partial.latestIncoming !== lastPartial.latestIncoming
+              ) {
+                lastPartial = partial;
+                if (
+                  partial.natural.length >= 2 ||
+                  partial.playful.length >= 2 ||
+                  partial.latestIncoming.length >= 2
+                ) {
+                  send({
+                    type: "partial",
+                    natural: partial.natural,
+                    playful: partial.playful,
+                    ...(partial.latestIncoming
+                      ? { latestIncoming: partial.latestIncoming }
+                      : {}),
+                  });
+                }
+              }
+            }
+
+            let parsed: Record<string, unknown>;
+            try {
+              parsed = JSON.parse(fullText) as Record<string, unknown>;
+            } catch {
+              send({
+                type: "error",
+                error: "Something went wrong generating replies. Please try again.",
+                code: "server",
+              });
+              controller.close();
+              return;
+            }
+
+            languageSource = message ||
+              String(parsed.latest_incoming ?? "").trim();
+            const validateOpts = { skipLanguageCheck };
+            let validated = validateReplies(parsed, languageSource, validateOpts);
+
+            // One non-stream retry if quality gates fail (keeps stream UX for first pass).
+            if (!validated.ok) {
+              const distinctFail =
+                "distinctMismatch" in validated && validated.distinctMismatch;
+              const languageFail =
+                "languageMismatch" in validated && validated.languageMismatch;
+              const formalFail =
+                "formalMismatch" in validated && validated.formalMismatch;
+              if (distinctFail || languageFail || formalFail) {
+                const hints: string[] = [];
+                if (languageFail) {
+                  const sourceVariety = detectScript(languageSource) === "latin"
+                    ? detectLatinVariety(languageSource)
+                    : "other";
+                  hints.push(
+                    sourceVariety === "hinglish"
+                      ? HINGLISH_RETRY_HINT
+                      : LANGUAGE_RETRY_HINT,
+                  );
+                }
+                if (distinctFail) hints.push(DISTINCT_RETRY_HINT);
+                if (formalFail) hints.push(FORMAL_RETRY_HINT);
+                parsed = await responsesJson({
+                  instructions,
+                  userText: `${baseUserText}\n\n${hints.join("\n")}`,
+                  imageDataUrl,
+                  model: "gpt-4o-mini",
+                  temperature: 0.9,
+                });
+                languageSource = message ||
+                  String(parsed.latest_incoming ?? "").trim() ||
+                  languageSource;
+                validated = validateReplies(parsed, languageSource, validateOpts);
+              }
+            }
+
+            if (!validated.ok) {
+              send({
+                type: "error",
+                ...(typeof validated.body === "object" && validated.body
+                  ? validated.body as Record<string, unknown>
+                  : {
+                    error: "Couldn't generate replies. Please try again.",
+                    code: "generation",
+                  }),
+              });
+              controller.close();
+              return;
+            }
+
+            if (
+              image && message && validated.body &&
+              typeof validated.body === "object"
+            ) {
+              (validated.body as Record<string, unknown>).latestIncoming =
+                message;
+            }
+
+            const usage = await recordGeneration(supabase, user.id);
+            const payload = validated.body && typeof validated.body === "object"
+              ? attachUsage(validated.body as Record<string, unknown>, usage)
+              : validated.body;
+            send({ type: "done", payload });
+          } catch (err) {
+            const msg = err instanceof Error
+              ? err.message.slice(0, 180)
+              : "unknown";
+            console.error(`generate-replies stream: ${msg}`);
+            send({
+              type: "error",
+              error: "Something went wrong generating replies. Please try again.",
+              code: "server",
+            });
+          } finally {
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(stream, { headers: sseHeaders });
+    }
+
+    // ---- Non-streaming path (default / fallback) ----
     ai = await responsesJson({
       instructions,
       userText: baseUserText,
@@ -694,7 +900,13 @@ Deno.serve(async (req) => {
     if (image && message && validated.body && typeof validated.body === "object") {
       (validated.body as Record<string, unknown>).latestIncoming = message;
     }
-    return jsonResponse(validated.body);
+
+    // Bill only after a successful, returnable result (includes needs_reply:false).
+    const usage = await recordGeneration(supabase, user.id);
+    const payload = validated.body && typeof validated.body === "object"
+      ? attachUsage(validated.body as Record<string, unknown>, usage)
+      : validated.body;
+    return jsonResponse(payload);
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 180) : "unknown";
     console.error(`generate-replies: ${message}`);

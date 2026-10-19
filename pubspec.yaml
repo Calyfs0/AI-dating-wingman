@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
   cupertino_icons: ^1.0.8
   go_router: ^16.2.1
   provider: ^6.1.5
@@ -29,6 +31,7 @@ dependencies:
   # Subscription-ready boundary (RevenueCat is source of truth for entitlements)
   purchases_flutter: ^8.10.6
   audioplayers: ^6.8.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

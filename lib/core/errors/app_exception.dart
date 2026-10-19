@@ -62,7 +62,10 @@ class AppExceptionMapper {
   static AppException map(Object error) {
     if (error is AppException) return error;
     final text = error.toString().toLowerCase();
-    if (text.contains('usage') && text.contains('limit')) {
+    if (text.contains('usage_limit') ||
+        (text.contains('usage') && text.contains('limit')) ||
+        text.contains('free replies') ||
+        text.contains('free limit')) {
       return const UsageLimitException();
     }
     if (text.contains('socket') ||

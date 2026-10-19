@@ -8,13 +8,12 @@ import '../../history/models/history_entry.dart';
 import '../../people/models/person.dart';
 import '../../usage/usage_controller.dart';
 import '../models/generation_prefs.dart';
+import '../models/reply_flow_state.dart';
 import '../models/reply_generation_result.dart';
 import '../models/suggested_replies.dart';
 import '../services/generate_replies_service.dart';
 
-enum ReplyFlowPhase { upload, textEntry, generating, results }
-
-enum ReplyInputSource { screenshot, text }
+export '../models/reply_flow_state.dart';
 
 /// In-memory only — nothing is persisted or linked across chats
 /// (aside from optional local history snapshots).
@@ -26,7 +25,9 @@ class ReplyFlowController extends ChangeNotifier {
     UsageController? usage,
   })  : _prefsOf = prefsOf,
         _history = history,
-        _usage = usage;
+        _usage = usage {
+    _seedSessionVibeFromYou();
+  }
 
   final GenerateRepliesService _service;
   final GenerationPrefs Function()? _prefsOf;
@@ -34,41 +35,62 @@ class ReplyFlowController extends ChangeNotifier {
   final UsageController? _usage;
   final ImagePicker _picker = ImagePicker();
 
-  ReplyFlowPhase phase = ReplyFlowPhase.upload;
-  ReplyInputSource lastSource = ReplyInputSource.screenshot;
+  ReplyFlowState _state = const ReplyUploadState();
+  NoReplyNotice? _pendingNoReply;
+
+  /// Session inputs that survive phase transitions (for try-again / regenerate).
   XFile? selectedImage;
   String typedMessage = '';
   String typedContext = '';
-  SuggestedReplies? replies;
-  String? errorMessage;
-  String? noReplyTitle;
-  String? noReplyMessage;
-  bool isBusy = false;
-  String loadingMessage = 'Reading the conversation…';
-  bool copiedConfirmation = false;
+  ReplyInputSource lastSource = ReplyInputSource.screenshot;
   Person? attachedPerson;
-
-  /// Tone to show first on results (from You prefs at generate time).
+  /// Session-only vibe (seeded from You prefs; tone switch updates this, not You).
   ReplyTone preferredVibe = ReplyTone.natural;
+  bool copiedConfirmation = false;
 
   int _generationToken = 0;
+  GenerationCancelToken? _cancelToken;
 
-  GenerationPrefs get _prefs {
-    final base = _prefsOf?.call() ?? const GenerationPrefs();
-    final person = attachedPerson;
-    if (person == null) return base;
-    return base.withPerson(name: person.name, note: person.note);
-  }
+  // ---- Compatibility getters (screens keep light updates) ----
 
-  void setAttachedPerson(Person? person) {
-    attachedPerson = person;
-    notifyListeners();
-  }
+  ReplyFlowState get state => _state;
+  ReplyFlowPhase get phase => _state.phase;
+  String? get errorMessage => _state.errorMessage;
+  bool get isBusy => _state.isBusy;
+  bool get isStreaming => _state.isStreaming;
+
+  SuggestedReplies? get replies => switch (_state) {
+        ReplyResultsState(:final replies) => replies,
+        _ => null,
+      };
+
+  String get loadingMessage => switch (_state) {
+        ReplyGeneratingState(:final loadingMessage) => loadingMessage,
+        _ => 'Reading the conversation…',
+      };
+
+  /// Legacy dual fields — prefer [consumeNoReplyNotice].
+  String? get noReplyTitle => _pendingNoReply?.title;
+  String? get noReplyMessage => _pendingNoReply?.message;
 
   bool get hasImage => selectedImage != null;
   bool get canGenerate => hasImage && !isBusy;
-  bool get hasNoReplyNotice =>
-      noReplyTitle != null && noReplyMessage != null;
+  bool get hasNoReplyNotice => _pendingNoReply != null;
+
+  GenerationPrefs get _prefs {
+    final base = _prefsOf?.call() ?? const GenerationPrefs();
+    // Session vibe wins for this flow; You prefs supply casual/language defaults.
+    final prefs = GenerationPrefs(
+      preferredVibe: preferredVibe,
+      keepCasual: base.keepCasual,
+      matchLanguage: base.matchLanguage,
+      personName: base.personName,
+      personNote: base.personNote,
+    );
+    final person = attachedPerson;
+    if (person == null) return prefs;
+    return prefs.withPerson(name: person.name, note: person.note);
+  }
 
   List<ReplyTone> get orderedTones {
     final preferred = preferredVibe;
@@ -78,7 +100,28 @@ class ReplyFlowController extends ChangeNotifier {
     ];
   }
 
-  /// Wipe session fields so the next chat cannot inherit the last one.
+  void _seedSessionVibeFromYou() {
+    preferredVibe =
+        _prefsOf?.call().preferredVibe ?? ReplyTone.natural;
+  }
+
+  /// Results tone switch — session only; does not write You preferences.
+  void setPreferredVibe(ReplyTone tone) {
+    if (preferredVibe == tone) return;
+    preferredVibe = tone;
+    notifyListeners();
+  }
+
+  void _setState(ReplyFlowState next) {
+    _state = next;
+    notifyListeners();
+  }
+
+  void setAttachedPerson(Person? person) {
+    attachedPerson = person;
+    notifyListeners();
+  }
+
   void _resetChatState({
     bool clearImage = true,
     bool clearTyped = true,
@@ -89,145 +132,149 @@ class ReplyFlowController extends ChangeNotifier {
       typedMessage = '';
       typedContext = '';
     }
-    if (clearReplies) replies = null;
-    errorMessage = null;
-    noReplyTitle = null;
-    noReplyMessage = null;
+    _pendingNoReply = null;
     copiedConfirmation = false;
+    // clearReplies handled by transitioning state away from results
   }
 
-  /// Returns and clears a pending "no reply needed" notice for the UI.
   ({String title, String message})? consumeNoReplyNotice() {
-    final title = noReplyTitle;
-    final message = noReplyMessage;
-    if (title == null || message == null) return null;
-    noReplyTitle = null;
-    noReplyMessage = null;
+    final notice = _pendingNoReply;
+    if (notice == null) return null;
+    _pendingNoReply = null;
     notifyListeners();
-    return (title: title, message: message);
+    return (title: notice.title, message: notice.message);
+  }
+
+  void _queueNoReply(NoReplyNotice notice) {
+    _pendingNoReply = notice;
   }
 
   Future<void> chooseScreenshot() => _pickImage(ImageSource.gallery);
 
-  /// Capture a chat on another phone (or any screen) with the camera.
-  Future<void> capturePhoto() => _pickImage(ImageSource.camera);
+  Future<void> capturePhoto() =>
+      _pickImage(kIsWeb ? ImageSource.gallery : ImageSource.camera);
 
   Future<void> _pickImage(ImageSource source) async {
-    errorMessage = null;
     final fromCamera = source == ImageSource.camera;
     try {
+      // Leaner images = faster upload + vision. Chat text stays readable at ~1280.
       final file = await _picker.pickImage(
         source: source,
-        imageQuality: 85,
-        maxWidth: 1800,
+        imageQuality: 72,
+        maxWidth: 1280,
         preferredCameraDevice: CameraDevice.rear,
       );
       if (file == null) return;
-      // New photo chat — drop any prior typed session completely.
       _resetChatState(clearImage: false, clearTyped: true, clearReplies: true);
       selectedImage = file;
       lastSource = ReplyInputSource.screenshot;
-      phase = ReplyFlowPhase.upload;
-      notifyListeners();
+      _setState(ReplyUploadState(selectedImage: file));
     } on PlatformException catch (e) {
       debugPrint('image_picker: ${e.code}');
-      errorMessage = fromCamera
-          ? 'Couldn’t open the camera. Check permissions and try again.'
-          : 'Couldn’t open Photos. Check permissions and try again.';
-      notifyListeners();
+      _setState(
+        ReplyUploadState(
+          selectedImage: selectedImage,
+          errorMessage: fromCamera
+              ? 'Camera access is needed to photograph a chat. Allow Camera for Gotchu in Settings, then try again.'
+              : 'Photo access is needed to pick a screenshot. Allow Photos for Gotchu in Settings, then try again.',
+        ),
+      );
     } catch (e) {
       debugPrint('image_picker: ${e.runtimeType}');
-      errorMessage = fromCamera
-          ? 'Couldn’t open the camera. Please try again.'
-          : 'Couldn’t open Photos. Please try again.';
-      notifyListeners();
+      _setState(
+        ReplyUploadState(
+          selectedImage: selectedImage,
+          errorMessage: fromCamera
+              ? 'Couldn’t open the camera. Please try again.'
+              : 'Couldn’t open Photos. Please try again.',
+        ),
+      );
     }
   }
 
   void clearScreenshot() {
     selectedImage = null;
-    replies = null;
-    errorMessage = null;
-    phase = ReplyFlowPhase.upload;
-    notifyListeners();
+    _pendingNoReply = null;
+    _setState(const ReplyUploadState());
   }
 
-  /// [fresh] clears typed fields — use for a brand-new text chat.
   void openTextEntry({bool fresh = true}) {
-    // Text chat never carries a prior screenshot.
     _resetChatState(
       clearImage: true,
       clearTyped: fresh,
       clearReplies: true,
     );
-    phase = ReplyFlowPhase.textEntry;
-    notifyListeners();
+    if (fresh) _seedSessionVibeFromYou();
+    _setState(const ReplyTextEntryState());
   }
 
   void backFromTextEntry() {
-    // Leaving compose without generating — discard the draft so it
-    // cannot leak into a later photo/text chat.
     _resetChatState(clearImage: true, clearTyped: true, clearReplies: true);
-    phase = ReplyFlowPhase.upload;
-    notifyListeners();
+    _setState(const ReplyUploadState());
   }
 
-  /// Back to the hub — fully isolated from the previous chat.
   void startOver() {
     _generationToken++;
-    isBusy = false;
+    _cancelToken?.cancel();
+    _cancelToken = null;
     _resetChatState(clearImage: true, clearTyped: true, clearReplies: true);
     lastSource = ReplyInputSource.screenshot;
-    phase = ReplyFlowPhase.upload;
-    notifyListeners();
+    _seedSessionVibeFromYou();
+    _setState(const ReplyUploadState());
   }
 
-  /// Leave results without wiping the screenshot / typed draft.
   void backFromResults() {
     _generationToken++;
-    isBusy = false;
-    replies = null;
-    errorMessage = null;
-    noReplyTitle = null;
-    noReplyMessage = null;
+    _cancelToken?.cancel();
+    _cancelToken = null;
+    _pendingNoReply = null;
     copiedConfirmation = false;
     if (lastSource == ReplyInputSource.text) {
-      phase = ReplyFlowPhase.textEntry;
+      _setState(const ReplyTextEntryState());
     } else {
-      phase = ReplyFlowPhase.upload;
+      _setState(ReplyUploadState(selectedImage: selectedImage));
     }
-    notifyListeners();
   }
 
-  /// Abort an in-flight generate and return to the prior input screen.
   void cancelGeneration() {
-    if (phase != ReplyFlowPhase.generating) return;
+    if (!_state.isBusy && !_state.isStreaming) return;
+    _cancelToken?.cancel();
+    _cancelToken = null;
     _generationToken++;
-    isBusy = false;
-    errorMessage = null;
-    phase = lastSource == ReplyInputSource.text
-        ? ReplyFlowPhase.textEntry
-        : ReplyFlowPhase.upload;
-    notifyListeners();
+    _returnToInput();
+  }
+
+  void _returnToInput({String? error}) {
+    if (lastSource == ReplyInputSource.text) {
+      _setState(ReplyTextEntryState(errorMessage: error));
+    } else {
+      _setState(
+        ReplyUploadState(selectedImage: selectedImage, errorMessage: error),
+      );
+    }
   }
 
   Future<void> generateReplies() async {
     final image = selectedImage;
     if (image == null) {
-      errorMessage = 'Choose a screenshot of your chat to continue.';
-      notifyListeners();
+      _setState(
+        const ReplyUploadState(
+          errorMessage: 'Choose a screenshot of your chat to continue.',
+        ),
+      );
       return;
     }
-    // Photo chat must not send leftover typed context later via edit→regenerate.
     typedMessage = '';
     typedContext = '';
     final prefs = _prefs;
-    preferredVibe = prefs.preferredVibe;
     await _runGeneration(
       source: ReplyInputSource.screenshot,
-      work: () => _service.generateFromScreenshot(
-        image.path,
+      work: ({required onPartial, required cancelToken}) =>
+          _service.generateFromScreenshot(
+        image,
         prefs: prefs,
+        onPartial: onPartial,
+        cancelToken: cancelToken,
       ),
     );
   }
@@ -238,107 +285,230 @@ class ReplyFlowController extends ChangeNotifier {
   }) async {
     final trimmed = message.trim();
     if (trimmed.isEmpty) {
-      errorMessage = 'Enter the message you received to continue.';
-      notifyListeners();
+      _setState(
+        const ReplyTextEntryState(
+          errorMessage: 'Enter the message you received to continue.',
+        ),
+      );
       return;
     }
-    // Text chat must not keep a prior screenshot around.
     selectedImage = null;
     typedMessage = trimmed;
     typedContext = context.trim();
     final prefs = _prefs;
-    preferredVibe = prefs.preferredVibe;
     await _runGeneration(
       source: ReplyInputSource.text,
-      work: () => _service.generateFromMessage(
+      work: ({required onPartial, required cancelToken}) =>
+          _service.generateFromMessage(
         message: typedMessage,
         context: typedContext.isEmpty ? null : typedContext,
         prefs: prefs,
+        onPartial: onPartial,
+        cancelToken: cancelToken,
       ),
     );
   }
 
   Future<void> _runGeneration({
     required ReplyInputSource source,
-    required Future<ReplyGenerationResult> Function() work,
+    required Future<ReplyGenerationResult> Function({
+      required ReplyPartialCallback onPartial,
+      required GenerationCancelToken cancelToken,
+    }) work,
   }) async {
     if (isBusy) return;
 
+    lastSource = source;
+
     final usage = _usage;
     if (usage != null && !await usage.tryConsume()) {
-      errorMessage = usage.limitMessage;
-      notifyListeners();
+      _returnToInput(error: usage.limitMessage);
       return;
     }
 
     final token = ++_generationToken;
-    isBusy = true;
-    errorMessage = null;
-    noReplyTitle = null;
-    noReplyMessage = null;
-    lastSource = source;
-    phase = ReplyFlowPhase.generating;
-    loadingMessage = source == ReplyInputSource.text
-        ? 'Reading your message…'
-        : 'Reading the conversation…';
-    notifyListeners();
+    _cancelToken?.cancel();
+    final cancelToken = GenerationCancelToken();
+    _cancelToken = cancelToken;
+
+    _pendingNoReply = null;
+    _setState(
+      ReplyGeneratingState(
+        source: source,
+        loadingMessage: source == ReplyInputSource.text
+            ? 'Reading your message…'
+            : 'Reading the conversation…',
+      ),
+    );
 
     Future<void>.delayed(const Duration(milliseconds: 900), () {
-      if (token != _generationToken || phase != ReplyFlowPhase.generating) {
-        return;
-      }
-      loadingMessage = 'Finding the right words…';
-      notifyListeners();
+      if (token != _generationToken) return;
+      final s = _state;
+      if (s is! ReplyGeneratingState) return;
+      _setState(s.copyWith(loadingMessage: 'Understanding the vibe…'));
     });
 
-    Future<void>.delayed(const Duration(milliseconds: 1800), () {
-      if (token != _generationToken || phase != ReplyFlowPhase.generating) {
+    Future<void>.delayed(const Duration(milliseconds: 1900), () {
+      if (token != _generationToken) return;
+      final s = _state;
+      if (s is! ReplyGeneratingState) return;
+      _setState(s.copyWith(loadingMessage: 'Crafting your replies…'));
+    });
+
+    void onPartial(String natural, String playful, {String? latestIncoming}) {
+      if (token != _generationToken) return;
+      final existing = replies;
+      final incoming = (latestIncoming?.trim().isNotEmpty == true)
+          ? latestIncoming!.trim()
+          : (existing?.latestIncoming?.trim().isNotEmpty == true
+              ? existing!.latestIncoming
+              : (typedMessage.trim().isNotEmpty ? typedMessage.trim() : null));
+      final hasReplies =
+          natural.trim().length >= 8 || playful.trim().length >= 8;
+      if (!hasReplies) {
+        // latest_incoming often streams before reply bodies — keep generating
+        // unless we already showed cards, then just fill their message.
+        if (incoming == null ||
+            incoming.isEmpty ||
+            existing == null ||
+            existing.latestIncoming == incoming) {
+          return;
+        }
+        _setState(
+          ReplyResultsState(
+            replies: existing.copyWith(latestIncoming: incoming),
+            source: source,
+            isStreaming: true,
+          ),
+        );
         return;
       }
-      loadingMessage = 'Turning tension into text…';
-      notifyListeners();
-    });
+      _setState(
+        ReplyResultsState(
+          replies: SuggestedReplies(
+            natural: natural.isEmpty ? '…' : natural,
+            playful: playful.isEmpty ? '…' : playful,
+            latestIncoming: incoming,
+          ),
+          source: source,
+          isStreaming: true,
+        ),
+      );
+    }
 
     try {
-      final result = await work();
+      final result = await work(
+        onPartial: onPartial,
+        cancelToken: cancelToken,
+      );
       if (token != _generationToken) return;
-      switch (result) {
-        case RepliesReady(:final replies):
-          this.replies = replies;
-          phase = ReplyFlowPhase.results;
-          final person = attachedPerson;
-          await _history?.addFromReplies(
-            kind: HistoryKind.reply,
-            replies: replies,
-            personId: person?.id,
-            personName: person?.name,
-          );
-        case NoReplyNeeded(:final title, :final message):
-          replies = null;
-          noReplyTitle = title;
-          noReplyMessage = message;
-          phase = source == ReplyInputSource.text
-              ? ReplyFlowPhase.textEntry
-              : ReplyFlowPhase.upload;
-      }
-    } on AppException catch (e) {
-      if (token != _generationToken) return;
-      errorMessage = e.message;
-      phase = source == ReplyInputSource.text
-          ? ReplyFlowPhase.textEntry
-          : ReplyFlowPhase.upload;
+      await _applyGenerationOutcome(result, source: source);
     } catch (e) {
       if (token != _generationToken) return;
-      errorMessage = AppExceptionMapper.map(e).message;
-      phase = source == ReplyInputSource.text
-          ? ReplyFlowPhase.textEntry
-          : ReplyFlowPhase.upload;
+      await _applyGenerationFailure(e, source: source, keepPartials: true);
     } finally {
       if (token == _generationToken) {
-        isBusy = false;
-        notifyListeners();
+        _cancelToken = null;
+        final s = _state;
+        if (s is ReplyResultsState && (s.isStreaming || s.isRegenerating)) {
+          _setState(
+            s.copyWith(isStreaming: false, isRegenerating: false),
+          );
+        } else if (s is ReplyGeneratingState) {
+          // Failure path should already have moved off generating.
+          _returnToInput();
+        } else {
+          notifyListeners();
+        }
       }
     }
+  }
+
+  Future<void> _applyGenerationOutcome(
+    ReplyGenerationResult result, {
+    required ReplyInputSource source,
+    String? latestIncomingOverride,
+  }) async {
+    await _usage?.refreshFromServer();
+    switch (result) {
+      case RepliesReady(:final replies):
+        final incoming = (latestIncomingOverride?.trim().isNotEmpty == true)
+            ? latestIncomingOverride!.trim()
+            : (replies.latestIncoming?.trim().isNotEmpty == true
+                ? replies.latestIncoming!.trim()
+                : (typedMessage.trim().isNotEmpty ? typedMessage.trim() : null));
+        final merged = SuggestedReplies(
+          natural: replies.natural,
+          playful: replies.playful,
+          latestIncoming: incoming,
+          hook: replies.hook,
+          why: replies.why,
+        );
+        _setState(
+          ReplyResultsState(replies: merged, source: source),
+        );
+        final person = attachedPerson;
+        await _history?.addFromReplies(
+          kind: HistoryKind.reply,
+          replies: merged,
+          personId: person?.id,
+          personName: person?.name,
+        );
+      case NoReplyNeeded(:final title, :final message):
+        _queueNoReply(NoReplyNotice(title: title, message: message));
+        _returnToInput();
+    }
+  }
+
+  Future<void> _applyGenerationFailure(
+    Object e, {
+    required ReplyInputSource source,
+    required bool keepPartials,
+    SuggestedReplies? restoreReplies,
+  }) async {
+    if (e is AppException && e.message == 'Cancelled.') return;
+
+    AppException mapped;
+    if (e is UsageLimitException) {
+      await _usage?.markExhausted();
+      await _usage?.refreshFromServer();
+      mapped = e;
+    } else if (e is AppException) {
+      mapped = e;
+    } else {
+      mapped = AppExceptionMapper.map(e);
+      if (mapped is UsageLimitException) {
+        await _usage?.markExhausted();
+        await _usage?.refreshFromServer();
+      }
+    }
+
+    if (restoreReplies != null) {
+      _setState(
+        ReplyResultsState(
+          replies: restoreReplies,
+          source: source,
+          errorMessage: mapped.message,
+        ),
+      );
+      return;
+    }
+
+    final current = _state;
+    if (keepPartials &&
+        current is ReplyResultsState &&
+        current.replies.natural.trim().isNotEmpty) {
+      _setState(
+        current.copyWith(
+          isStreaming: false,
+          isRegenerating: false,
+          errorMessage: mapped.message,
+        ),
+      );
+      return;
+    }
+
+    _returnToInput(error: mapped.message);
   }
 
   Future<void> tryAgain() async {
@@ -360,88 +530,137 @@ class ReplyFlowController extends ChangeNotifier {
     await generateReplies();
   }
 
-  /// Re-run from an edited "latest message" without leaving the results screen.
-  /// Photo chats keep the screenshot; text chats resend only the edited line.
   Future<void> regenerateFromEditedMessage(String message) async {
     final trimmed = message.trim();
     if (trimmed.isEmpty) {
-      errorMessage = 'Enter the message you received to continue.';
-      notifyListeners();
+      final s = _state;
+      if (s is ReplyResultsState) {
+        _setState(
+          s.copyWith(
+            errorMessage: 'Enter the message you received to continue.',
+          ),
+        );
+      }
       return;
     }
     if (isBusy) return;
 
     final image = selectedImage;
-    final keepScreenshot = image != null &&
-        lastSource == ReplyInputSource.screenshot;
+    final keepScreenshot =
+        image != null && lastSource == ReplyInputSource.screenshot;
 
     typedMessage = trimmed;
     if (!keepScreenshot) {
-      // Pure text session — don't drag optional context from an older chat.
       typedContext = '';
       selectedImage = null;
       lastSource = ReplyInputSource.text;
     }
 
     final token = ++_generationToken;
+    _cancelToken?.cancel();
+    final cancelToken = GenerationCancelToken();
+    _cancelToken = cancelToken;
     final prefs = _prefs;
-    preferredVibe = prefs.preferredVibe;
     final previousReplies = replies;
+    final source = lastSource;
 
-    isBusy = true;
-    errorMessage = null;
-    noReplyTitle = null;
-    noReplyMessage = null;
-    phase = ReplyFlowPhase.results;
-    notifyListeners();
+    _pendingNoReply = null;
+    if (previousReplies != null) {
+      _setState(
+        ReplyResultsState(
+          replies: previousReplies,
+          source: source,
+          isStreaming: true,
+          isRegenerating: true,
+        ),
+      );
+    } else {
+      _setState(
+        ReplyGeneratingState(
+          source: source,
+          loadingMessage: 'Finding the right words…',
+        ),
+      );
+    }
+
+    void onPartial(String natural, String playful, {String? latestIncoming}) {
+      if (token != _generationToken) return;
+      if (natural.trim().length < 8 && playful.trim().length < 8) return;
+      _setState(
+        ReplyResultsState(
+          replies: SuggestedReplies(
+            natural: natural.isEmpty ? '…' : natural,
+            playful: playful.isEmpty ? '…' : playful,
+            latestIncoming: (latestIncoming?.trim().isNotEmpty == true)
+                ? latestIncoming!.trim()
+                : trimmed,
+          ),
+          source: source,
+          isStreaming: true,
+          isRegenerating: true,
+        ),
+      );
+    }
 
     try {
       final ReplyGenerationResult outcome;
       if (keepScreenshot) {
         outcome = await _service.generateFromScreenshot(
-          image.path,
+          image,
           latestMessageOverride: trimmed,
           prefs: prefs,
+          onPartial: onPartial,
+          cancelToken: cancelToken,
         );
       } else {
         outcome = await _service.generateFromMessage(
           message: typedMessage,
           prefs: prefs,
+          onPartial: onPartial,
+          cancelToken: cancelToken,
         );
       }
       if (token != _generationToken) return;
       switch (outcome) {
         case RepliesReady(:final replies):
-          this.replies = SuggestedReplies(
-            natural: replies.natural,
-            playful: replies.playful,
-            latestIncoming: trimmed,
+          await _usage?.refreshFromServer();
+          _setState(
+            ReplyResultsState(
+              replies: SuggestedReplies(
+                natural: replies.natural,
+                playful: replies.playful,
+                latestIncoming: trimmed,
+              ),
+              source: source,
+            ),
           );
-          phase = ReplyFlowPhase.results;
         case NoReplyNeeded(:final title, :final message):
-          noReplyTitle = title;
-          noReplyMessage = message;
-          // Keep prior cards when possible so regenerate doesn't feel like a crash.
+          _queueNoReply(NoReplyNotice(title: title, message: message));
           if (previousReplies != null) {
-            replies = previousReplies;
-            phase = ReplyFlowPhase.results;
+            _setState(
+              ReplyResultsState(replies: previousReplies, source: source),
+            );
           } else {
-            replies = null;
-            phase = keepScreenshot
-                ? ReplyFlowPhase.upload
-                : ReplyFlowPhase.textEntry;
+            _returnToInput();
           }
       }
-    } on AppException catch (e) {
-      if (token != _generationToken) return;
-      errorMessage = e.message;
     } catch (e) {
       if (token != _generationToken) return;
-      errorMessage = AppExceptionMapper.map(e).message;
+      await _applyGenerationFailure(
+        e,
+        source: source,
+        keepPartials: false,
+        restoreReplies: previousReplies,
+      );
     } finally {
       if (token == _generationToken) {
-        isBusy = false;
-        notifyListeners();
+        _cancelToken = null;
+        final s = _state;
+        if (s is ReplyResultsState && (s.isStreaming || s.isRegenerating)) {
+          _setState(s.copyWith(isStreaming: false, isRegenerating: false));
+        } else {
+          notifyListeners();
+        }
       }
     }
   }
@@ -459,8 +678,14 @@ class ReplyFlowController extends ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('clipboard: ${e.runtimeType}');
-      errorMessage = 'Couldn’t copy. Please try again.';
-      notifyListeners();
+      final s = _state;
+      if (s is ReplyResultsState) {
+        _setState(
+          s.copyWith(errorMessage: 'Couldn’t copy. Please try again.'),
+        );
+      } else {
+        notifyListeners();
+      }
       return false;
     }
   }

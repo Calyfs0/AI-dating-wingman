@@ -38,7 +38,8 @@ class ProfileAuditController extends ChangeNotifier {
       phase = ProfileAuditPhase.upload;
       notifyListeners();
     } on PlatformException {
-      errorMessage = 'Couldn’t open Photos. Check permissions and try again.';
+      errorMessage =
+          'Photo access is needed to pick a profile screenshot. Allow Photos for Gotchu in Settings, then try again.';
       notifyListeners();
     }
   }
@@ -78,12 +79,23 @@ class ProfileAuditController extends ChangeNotifier {
         imagePath: image.path,
         bio: bioDraft,
       );
+      await _usage?.refreshFromServer();
       phase = ProfileAuditPhase.results;
+    } on UsageLimitException catch (e) {
+      await _usage?.markExhausted();
+      await _usage?.refreshFromServer();
+      errorMessage = e.message;
+      phase = ProfileAuditPhase.upload;
     } on AppException catch (e) {
       errorMessage = e.message;
       phase = ProfileAuditPhase.upload;
     } catch (e) {
-      errorMessage = AppExceptionMapper.map(e).message;
+      final mapped = AppExceptionMapper.map(e);
+      if (mapped is UsageLimitException) {
+        await _usage?.markExhausted();
+        await _usage?.refreshFromServer();
+      }
+      errorMessage = mapped.message;
       phase = ProfileAuditPhase.upload;
     } finally {
       isBusy = false;

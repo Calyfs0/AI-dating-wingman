@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/di/service_locator.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../history/controllers/history_controller.dart';
@@ -15,6 +13,7 @@ Future<void> showPersonBriefingSheet(
   required Person person,
 }) async {
   final history = context.read<HistoryController>();
+  final coach = context.read<PeopleCoachService>();
   final snippets = history
       .forPerson(person.id)
       .take(5)
@@ -30,7 +29,7 @@ Future<void> showPersonBriefingSheet(
     ),
     builder: (ctx) {
       return FutureBuilder(
-        future: PeopleCoachService(getIt<SupabaseClient>()).briefing(
+        future: coach.briefing(
           person: person,
           historySnippets: snippets,
         ),
@@ -208,9 +207,7 @@ Future<void> showPersonDebriefSheet(
                     .map((e) => e.natural)
                     .toList();
                 try {
-                  final result =
-                      await PeopleCoachService(getIt<SupabaseClient>())
-                          .debrief(
+                  final result = await context.read<PeopleCoachService>().debrief(
                     person: person,
                     notes: notes,
                     historySnippets: snippets,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:wingman/core/theme/app_theme.dart';
 import 'package:wingman/features/history/controllers/history_controller.dart';
@@ -15,9 +16,11 @@ import 'package:wingman/features/you/controllers/you_preferences_controller.dart
 class _FakeService implements GenerateRepliesService {
   @override
   Future<ReplyGenerationResult> generateFromScreenshot(
-    String imagePath, {
+    XFile image, {
     String? latestMessageOverride,
     GenerationPrefs prefs = const GenerationPrefs(),
+    ReplyPartialCallback? onPartial,
+    GenerationCancelToken? cancelToken,
   }) async {
     return const RepliesReady(
       SuggestedReplies(
@@ -32,6 +35,8 @@ class _FakeService implements GenerateRepliesService {
     required String message,
     String? context,
     GenerationPrefs prefs = const GenerationPrefs(),
+    ReplyPartialCallback? onPartial,
+    GenerationCancelToken? cancelToken,
   }) async {
     return const RepliesReady(
       SuggestedReplies(
@@ -43,8 +48,10 @@ class _FakeService implements GenerateRepliesService {
 
   @override
   Future<ReplyGenerationResult> generateOpeners(
-    String imagePath, {
+    XFile image, {
     GenerationPrefs prefs = const GenerationPrefs(),
+    ReplyPartialCallback? onPartial,
+    GenerationCancelToken? cancelToken,
   }) async {
     return const RepliesReady(
       SuggestedReplies(
@@ -82,10 +89,10 @@ void main() {
     );
 
     expect(find.textContaining('Gotchu'), findsWidgets);
-    expect(find.text('Generate replies'), findsOneWidget);
-    expect(find.text('Upload a screenshot of your chat'), findsOneWidget);
-    expect(find.text('Natural'), findsOneWidget);
-    expect(find.text('Playful'), findsOneWidget);
+    expect(find.text('Upload screenshot'), findsOneWidget);
+    expect(find.text('Upload a chat screenshot'), findsOneWidget);
+    expect(find.textContaining('not stored'), findsOneWidget);
+    expect(find.textContaining('Get 2 natural replies'), findsOneWidget);
   });
 }
 

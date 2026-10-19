@@ -96,11 +96,47 @@ class _PromiseStep extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Text(
-          'Upload a chat or profile, get two ready-to-send lines that sound like you — not a chatbot.',
+          'Upload a chat screenshot → get 2 replies you can copy and send. Sounds like you — not a chatbot.',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 16,
             color: const Color(0xFFB9AEC8),
             height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 20),
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Core loop',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.neonPink,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '1. Upload the chat\n2. Pick a reply\n3. Copy → send',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  color: Colors.white,
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Later: Openers for first messages from a profile. That’s optional.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  color: const Color(0xFF9A8FA8),
+                  height: 1.35,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -245,7 +281,7 @@ class _PrivacyStep extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Screenshots are sent briefly for analysis, then discarded — we don’t save them to your account. Recent replies stay on this device only.',
+          'Screenshots are analyzed in memory and are not stored on your Gotchu account. History you keep stays on this device — clear it anytime in You.',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 15,
             color: const Color(0xFFB9AEC8),
@@ -264,7 +300,7 @@ class _PrivacyStep extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'You’re in control. Clear local history anytime from You.',
+                  'You’re in control. Delete account or clear local history from You whenever you want.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     color: Colors.white,

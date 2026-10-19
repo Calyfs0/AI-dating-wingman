@@ -143,7 +143,7 @@ class _TypeMessageScreenState extends State<TypeMessageScreen> {
                   ),
                   children: [
                     Text(
-                      'Skip the screenshot — paste what they sent.',
+                      'No screenshot needed — paste what they sent and get 2 replies.',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
@@ -152,7 +152,17 @@ class _TypeMessageScreenState extends State<TypeMessageScreen> {
                         height: 1.4,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Text stays in this session — not saved as a screenshot.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: const Color(0xFF7E738F),
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     const _SectionLabel(
                       icon: Icons.chat_bubble_outline_rounded,
                       label: 'Message you received',

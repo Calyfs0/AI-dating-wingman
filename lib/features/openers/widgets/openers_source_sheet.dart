@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -57,25 +58,29 @@ Future<void> showOpenersSourceSheet(BuildContext context) {
                     const SizedBox(height: 12),
                     _SheetRow(
                       icon: Icons.photo_library_outlined,
-                      title: 'Photos',
-                      subtitle: 'Pick a profile screenshot',
+                      title: kIsWeb ? 'Choose a file' : 'Photos',
+                      subtitle: kIsWeb
+                          ? 'Upload a profile screenshot'
+                          : 'Pick a profile screenshot',
                       onTap: () {
                         HapticFeedback.selectionClick();
                         Navigator.pop(ctx);
                         c.chooseFromPhotos();
                       },
                     ),
-                    const SizedBox(height: 8),
-                    _SheetRow(
-                      icon: Icons.photo_camera_outlined,
-                      title: 'Camera',
-                      subtitle: 'Snap their profile',
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        Navigator.pop(ctx);
-                        c.capturePhoto();
-                      },
-                    ),
+                    if (!kIsWeb) ...[
+                      const SizedBox(height: 8),
+                      _SheetRow(
+                        icon: Icons.photo_camera_outlined,
+                        title: 'Camera',
+                        subtitle: 'Snap their profile',
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.pop(ctx);
+                          c.capturePhoto();
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),

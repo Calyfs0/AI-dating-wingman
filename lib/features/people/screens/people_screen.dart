@@ -44,7 +44,7 @@ class PeopleScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'A private local list — not sent with Reply or Openers.',
+                          'Light reminders — name + status, on this device only.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             color: const Color(0xFFB9AEC8),
@@ -85,14 +85,6 @@ class PeopleScreen extends StatelessWidget {
                                     ),
                                     onLongPress: () =>
                                         _confirmDelete(context, person),
-                                    onBriefing: () => showPersonBriefingSheet(
-                                      context,
-                                      person: person,
-                                    ),
-                                    onDebrief: () => showPersonDebriefSheet(
-                                      context,
-                                      person: person,
-                                    ),
                                   );
                                 },
                               ),
@@ -198,11 +190,20 @@ class PeopleScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            isEdit ? 'Edit person' : 'New person',
+                            isEdit ? 'Edit' : 'Add someone',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Just for you — not shared with Reply or Openers unless you attach them.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              color: const Color(0xFF9A8FA8),
+                              height: 1.35,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -214,7 +215,7 @@ class PeopleScreen extends StatelessWidget {
                           const SizedBox(height: 12),
                           _Field(
                             controller: noteCtrl,
-                            hint: 'One-line note (optional)',
+                            hint: 'Optional note (private)',
                             maxLines: 2,
                           ),
                           const SizedBox(height: 14),
@@ -306,6 +307,22 @@ class PeopleScreen extends StatelessWidget {
                           if (isEdit) ...[
                             const SizedBox(height: 8),
                             TextButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                showPersonBriefingSheet(
+                                  context,
+                                  person: person,
+                                );
+                              },
+                              child: Text(
+                                'Quick tip (optional)',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFB9AEC8),
+                                ),
+                              ),
+                            ),
+                            TextButton(
                               onPressed: () async {
                                 Navigator.pop(ctx);
                                 if (context.mounted) {
@@ -313,7 +330,7 @@ class PeopleScreen extends StatelessWidget {
                                 }
                               },
                               child: Text(
-                                'Remove from list',
+                                'Remove',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.danger,
@@ -358,7 +375,7 @@ class _EmptyPeople extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              'No one yet',
+              'Nobody here yet',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -367,7 +384,7 @@ class _EmptyPeople extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Track who you’re talking to on this device — names and notes stay local.',
+              'Add a name when it helps you remember whose turn it is. Totally optional — Reply works without it.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 color: const Color(0xFFB9AEC8),
@@ -397,15 +414,11 @@ class _PersonCard extends StatelessWidget {
     required this.person,
     required this.onTap,
     required this.onLongPress,
-    required this.onBriefing,
-    required this.onDebrief,
   });
 
   final Person person;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
-  final VoidCallback onBriefing;
-  final VoidCallback onDebrief;
 
   Color get _statusColor => switch (person.status) {
         PersonStatus.yourMove => AppColors.neonPink,
@@ -430,27 +443,30 @@ class _PersonCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             color: const Color(0xCC1A1016),
             border: Border.all(
-              color: AppColors.neonPink.withValues(alpha: 0.18),
+              color: Colors.white.withValues(alpha: 0.08),
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
             child: Row(
               children: [
                 Container(
-                  width: 46,
-                  height: 46,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: AppColors.accentGradient,
+                    color: AppColors.neonPink.withValues(alpha: 0.18),
+                    border: Border.all(
+                      color: AppColors.neonPink.withValues(alpha: 0.35),
+                    ),
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     initial,
                     style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       color: Colors.white,
-                      fontSize: 18,
+                      fontSize: 16,
                     ),
                   ),
                 ),
@@ -468,63 +484,21 @@ class _PersonCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _statusColor.withValues(alpha: 0.16),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: _statusColor.withValues(alpha: 0.45),
-                          ),
-                        ),
-                        child: Text(
-                          person.status.label,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: _statusColor,
-                          ),
+                      Text(
+                        person.status.label,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _statusColor,
                         ),
                       ),
-                      if (person.note.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          person.note,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            color: const Color(0xFF9A8FA8),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
-                Column(
-                  children: [
-                    IconButton(
-                      tooltip: 'Briefing',
-                      onPressed: onBriefing,
-                      icon: Icon(
-                        Icons.lightbulb_outline_rounded,
-                        color: AppColors.neonPink.withValues(alpha: 0.85),
-                        size: 20,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Debrief',
-                      onPressed: onDebrief,
-                      icon: const Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        color: Color(0xFFB9AEC8),
-                        size: 20,
-                      ),
-                    ),
-                  ],
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFF7E738F),
+                  size: 22,
                 ),
               ],
             ),
@@ -570,7 +544,7 @@ class _NewPersonFab extends StatelessWidget {
                 const Icon(Icons.add_rounded, color: Colors.white, size: 20),
                 const SizedBox(width: 6),
                 Text(
-                  'New person',
+                  'Add',
                   style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w700,
                     color: Colors.white,

@@ -1,6 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 import { responsesJson } from "../_shared/openai_responses.ts";
+import { SAFETY_RULES } from "../_shared/safety.ts";
+import {
+  assertGenerationAllowed,
+  attachUsage,
+  recordGeneration,
+} from "../_shared/usage.ts";
 
 const MAX_IMAGE_CHARS = 7_500_000;
 
@@ -40,6 +46,9 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Unauthorized", code: "auth" }, 401);
     }
 
+    const usageGate = await assertGenerationAllowed(supabase, user.id);
+    if (!usageGate.ok) return usageGate.response;
+
     const body = await req.json();
     const image = normalizeImageDataUrl(String(body.image ?? ""));
     if (!image) {
@@ -59,6 +68,9 @@ Extract hook: one concrete visible detail good for an opener.
 If bio text was provided, treat it as currentBio; else extract visible bio/prompts into currentBio.
 
 Never invent photos or hobbies that are not visible.
+
+${SAFETY_RULES}
+- Keep critique respectful; never sexualize minors or invent NSFW from thin air.
 
 Return JSON only:
 {
@@ -89,7 +101,8 @@ Return JSON only:
       ? ai.photoNotes.map((n) => String(n).trim()).filter(Boolean).slice(0, 4)
       : [];
 
-    return jsonResponse({
+    const usage = await recordGeneration(supabase, user.id);
+    return jsonResponse(attachUsage({
       overall: Number(ai.overall ?? 0.65),
       clarity: Number(ai.clarity ?? 0.65),
       personality: Number(ai.personality ?? 0.65),
@@ -101,7 +114,7 @@ Return JSON only:
       bioFunnier: String(ai.bioFunnier ?? "").trim(),
       bioShorter: String(ai.bioShorter ?? "").trim(),
       hook: String(ai.hook ?? "").trim() || null,
-    });
+    }, usage));
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 180) : "unknown";
     console.error(`profile-audit: ${message}`);

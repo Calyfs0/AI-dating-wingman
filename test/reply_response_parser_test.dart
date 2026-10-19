@@ -130,4 +130,23 @@ void main() {
       ),
     );
   });
+
+  test('rejects empty replies map', () {
+    expect(
+      () => parser.parse({'readable': true, 'replies': <String, dynamic>{}}),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('defaults no-reply copy when title/message missing', () {
+    final result = parser.parse({
+      'readable': true,
+      'needsReply': false,
+    });
+
+    expect(result, isA<NoReplyNeeded>());
+    final notice = result as NoReplyNeeded;
+    expect(notice.title, "You're all set");
+    expect(notice.message, contains('already sent'));
+  });
 }

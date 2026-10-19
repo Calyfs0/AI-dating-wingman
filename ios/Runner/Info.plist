@@ -27,13 +27,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Gotchu uses the camera so you can photograph a chat from another phone and get private reply suggestions.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Gotchu uses the microphone for optional practice and date debrief voice input.</string>
+	<string>Gotchu uses the camera so you can photograph a chat or dating profile from another phone. Images are analyzed in memory and are not saved to your Gotchu account.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Gotchu uses your photo library so you can upload conversation screenshots for private reply help.</string>
-	<key>NSUserNotificationsUsageDescription</key>
-	<string>Gotchu can remind you about conversations and dates you choose to track.</string>
+	<string>Gotchu needs photo access so you can pick a chat or profile screenshot. Screenshots are analyzed briefly and are not stored on your Gotchu account.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

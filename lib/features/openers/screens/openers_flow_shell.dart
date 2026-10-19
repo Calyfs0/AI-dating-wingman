@@ -11,14 +11,29 @@ class OpenersFlowShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final phase = context.watch<OpenersFlowController>().phase;
+    final state = context.watch<OpenersFlowController>().state;
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 280),
-      child: switch (phase) {
-        OpenersPhase.upload => const OpenersUploadScreen(key: ValueKey('o-up')),
-        OpenersPhase.generating =>
+      duration: const Duration(milliseconds: 320),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      layoutBuilder: (currentChild, previousChildren) {
+        return Stack(
+          alignment: Alignment.center,
+          children: <Widget>[
+            ...previousChildren,
+            if (currentChild != null) currentChild,
+          ],
+        );
+      },
+      transitionBuilder: (child, animation) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      child: switch (state) {
+        OpenersUploadState() =>
+          const OpenersUploadScreen(key: ValueKey('o-up')),
+        OpenersGeneratingState() =>
           const OpenersGeneratingScreen(key: ValueKey('o-gen')),
-        OpenersPhase.results =>
+        OpenersResultsState() =>
           const OpenersResultsScreen(key: ValueKey('o-res')),
       },
     );

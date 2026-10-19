@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../../screenshot_reply/widgets/mockup_components.dart';
+import '../../screenshot_reply/widgets/picked_image_preview.dart';
 import '../controllers/openers_flow_controller.dart';
 import '../widgets/openers_source_sheet.dart';
 
@@ -64,20 +64,9 @@ class OpenersUploadScreen extends StatelessWidget {
                                 child: ColoredBox(
                                   color: const Color(0xFF1A1324),
                                   child: SingleChildScrollView(
-                                    child: Image.file(
-                                      File(c.selectedImage!.path),
-                                      fit: BoxFit.fitWidth,
-                                      width: double.infinity,
-                                      errorBuilder: (_, __, ___) => const SizedBox(
-                                        height: 180,
-                                        child: Center(
-                                          child: Icon(
-                                            Icons.broken_image_outlined,
-                                            color: Color(0xFF7E738F),
-                                            size: 40,
-                                          ),
-                                        ),
-                                      ),
+                                    child: PickedImagePreview(
+                                      file: c.selectedImage!,
+                                      errorHeight: 180,
                                     ),
                                   ),
                                 ),
@@ -110,24 +99,47 @@ class OpenersUploadScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Upload their profile — get a first message that fits.',
+                            'Upload their profile → get 2 first messages you can send.',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 14,
                               color: const Color(0xFFB9AEC8),
                               height: 1.35,
                             ),
                           ),
-                          const SizedBox(height: 22),
+                          const SizedBox(height: 18),
                           DashedUploadZone(
                             onTap: c.isBusy ? null : c.chooseFromPhotos,
                             onCameraTap: c.isBusy ? null : c.capturePhoto,
                             showTypeMessage: false,
-                            title: 'Upload a profile screenshot',
-                            subtitle: "I'll craft a first message from their prompts.",
+                            showCamera: !kIsWeb,
+                            title: kIsWeb
+                                ? 'Choose a profile screenshot'
+                                : 'Upload a profile screenshot',
+                            subtitle:
+                                'Natural + playful openers from their prompts.',
                             footer: 'Hinge · Bumble · Tinder · OkCupid',
                             cameraTitle: 'Take a photo',
-                            cameraSubtitle: 'Snap their profile from another phone',
+                            cameraSubtitle:
+                                'Snap their profile from another phone',
                           ),
+                          const SizedBox(height: 12),
+                          const UploadTrustLine(),
+                          const SizedBox(height: 8),
+                          const UploadHintLine(
+                            text:
+                                'Tip: include name + prompts/bio so the opener can reference something real.',
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            'Default vibe',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF7E738F),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const MoodChipRow(),
                           if (c.errorMessage != null) ...[
                             const SizedBox(height: 14),
                             Text(
@@ -143,7 +155,11 @@ class OpenersUploadScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
                 child: NeonGenerateButton(
-                  label: 'Generate openers',
+                  label: hasImage
+                      ? 'Generate openers'
+                      : (kIsWeb
+                          ? 'Choose screenshot'
+                          : 'Upload screenshot'),
                   isLoading: c.isBusy,
                   onPressed: c.isBusy
                       ? null

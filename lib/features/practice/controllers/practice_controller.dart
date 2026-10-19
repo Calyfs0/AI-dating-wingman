@@ -19,9 +19,16 @@ class PracticeController extends ChangeNotifier {
   PracticeFeedback? feedback;
   bool isBusy = false;
   String? errorMessage;
+  int _turnToken = 0;
 
   List<PracticePersona> get visiblePersonas =>
       PracticePersonaCopy.forGender(genderFilter);
+
+  /// True when returning to /practice would resume mid-flow (not idle personas).
+  bool get hasResumableSession =>
+      phase == PracticePhase.session ||
+      phase == PracticePhase.feedback ||
+      (phase == PracticePhase.topics && persona != null);
 
   void setGenderFilter(PracticeGender gender) {
     if (genderFilter == gender) return;
@@ -78,6 +85,7 @@ class PracticeController extends ChangeNotifier {
   }
 
   void backToPersonas() {
+    _turnToken++;
     persona = null;
     topic = null;
     turns.clear();
@@ -85,6 +93,27 @@ class PracticeController extends ChangeNotifier {
     errorMessage = null;
     isBusy = false;
     phase = PracticePhase.personas;
+    notifyListeners();
+  }
+
+  /// Full reset to Practice entry. Does not write gender filter.
+  void resetToIdle() {
+    _turnToken++;
+    persona = null;
+    topic = null;
+    turns.clear();
+    feedback = null;
+    errorMessage = null;
+    isBusy = false;
+    phase = PracticePhase.personas;
+    notifyListeners();
+  }
+
+  /// Drop an in-flight turn without wiping a resumable session (e.g. route pop).
+  void abandonInFlight() {
+    if (!isBusy) return;
+    _turnToken++;
+    isBusy = false;
     notifyListeners();
   }
 
@@ -107,6 +136,7 @@ class PracticeController extends ChangeNotifier {
   }
 
   void backToTopics() {
+    _turnToken++;
     topic = null;
     turns.clear();
     feedback = null;
@@ -122,6 +152,7 @@ class PracticeController extends ChangeNotifier {
 
     // Practice is rehearsal — it does not burn the Free Reply/Openers quota.
     turns.add(PracticeTurn(fromUser: true, text: trimmed));
+    final token = ++_turnToken;
     isBusy = true;
     errorMessage = null;
     notifyListeners();
@@ -137,6 +168,7 @@ class PracticeController extends ChangeNotifier {
         history: List.unmodifiable(prior),
         userMessage: trimmed,
       );
+      if (token != _turnToken) return;
       if (result.personaLine.isNotEmpty) {
         turns.add(PracticeTurn(fromUser: false, text: result.personaLine));
       }
@@ -153,22 +185,29 @@ class PracticeController extends ChangeNotifier {
         phase = PracticePhase.feedback;
       }
     } on AppException catch (e) {
+      if (token != _turnToken) return;
       errorMessage = e.message;
-      turns.removeLast();
+      if (turns.isNotEmpty && turns.last.fromUser) turns.removeLast();
     } catch (e) {
+      if (token != _turnToken) return;
       errorMessage = AppExceptionMapper.map(e).message;
-      turns.removeLast();
+      if (turns.isNotEmpty && turns.last.fromUser) turns.removeLast();
     } finally {
-      isBusy = false;
-      notifyListeners();
+      if (token == _turnToken) {
+        isBusy = false;
+        notifyListeners();
+      }
     }
   }
 
+  /// Soft wrap → feedback when the user has spoken; otherwise back to topics.
   void endEarly() {
     if (turns.where((t) => t.fromUser).isEmpty) {
       backToTopics();
       return;
     }
+    _turnToken++;
+    isBusy = false;
     feedback ??= PracticeFeedback(
       summary:
           'Session ended early — one practice chat with $partnerName, not a verdict on you.',
@@ -180,4 +219,7 @@ class PracticeController extends ChangeNotifier {
     phase = PracticePhase.feedback;
     notifyListeners();
   }
+
+  /// One-tap exit: clear ephemeral session and return to Practice entry.
+  void endSession() => resetToIdle();
 }

@@ -6,7 +6,7 @@ enum PersonStatus { yourMove, waiting, quiet }
 extension PersonStatusLabel on PersonStatus {
   String get label => switch (this) {
         PersonStatus.yourMove => 'Your move',
-        PersonStatus.waiting => 'Waiting on them',
+        PersonStatus.waiting => 'Waiting',
         PersonStatus.quiet => 'Quiet',
       };
 

@@ -1,7 +1,7 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -10,6 +10,7 @@ import '../widgets/desire_backdrop.dart';
 import '../widgets/mockup_components.dart';
 import '../widgets/new_chat_options_sheet.dart';
 import '../widgets/no_reply_needed_dialog.dart';
+import '../widgets/picked_image_preview.dart';
 
 /// Upload screen built to match `wingman_mockup_upload`.
 class UploadScreenshotScreen extends StatefulWidget {
@@ -56,7 +57,7 @@ class _UploadScreenshotScreenState extends State<UploadScreenshotScreen> {
               Expanded(
                 child: hasImage
                     ? _SelectedChatLayout(
-                        path: controller.selectedImage!.path,
+                        file: controller.selectedImage!,
                         errorMessage: controller.errorMessage,
                         isBusy: controller.isBusy,
                         onClear: controller.clearScreenshot,
@@ -66,9 +67,7 @@ class _UploadScreenshotScreenState extends State<UploadScreenshotScreen> {
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                         children: [
                           const GotchuBrandHeader(),
-                          const SizedBox(height: 16),
-                          const MoodChipRow(),
-                          const SizedBox(height: 22),
+                          const SizedBox(height: 18),
                           DashedUploadZone(
                             onTap: controller.isBusy
                                 ? null
@@ -79,7 +78,28 @@ class _UploadScreenshotScreenState extends State<UploadScreenshotScreen> {
                             onTypeMessageTap: controller.isBusy
                                 ? null
                                 : controller.openTextEntry,
+                            showCamera: !kIsWeb,
+                            title: kIsWeb
+                                ? 'Choose a chat screenshot'
+                                : 'Upload a chat screenshot',
+                            subtitle:
+                                'Get 2 natural replies you can copy and send.',
                           ),
+                          const SizedBox(height: 12),
+                          const UploadTrustLine(),
+                          const SizedBox(height: 8),
+                          const UploadHintLine(),
+                          const SizedBox(height: 18),
+                          Text(
+                            'Default vibe',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF7E738F),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const MoodChipRow(),
                           if (controller.errorMessage != null) ...[
                             const SizedBox(height: 14),
                             GlassCard(
@@ -100,12 +120,17 @@ class _UploadScreenshotScreenState extends State<UploadScreenshotScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                 child: NeonGenerateButton(
+                  label: hasImage
+                      ? 'Generate replies'
+                      : (kIsWeb
+                          ? 'Choose screenshot'
+                          : 'Upload screenshot'),
                   isLoading: controller.isBusy,
                   onPressed: controller.isBusy
                       ? null
                       : () {
                           if (controller.selectedImage == null) {
-                            showNewChatOptionsSheet(context);
+                            controller.chooseScreenshot();
                           } else {
                             controller.generateReplies();
                           }
@@ -123,14 +148,14 @@ class _UploadScreenshotScreenState extends State<UploadScreenshotScreen> {
 /// Compact chrome + large scrollable preview once a chat is selected.
 class _SelectedChatLayout extends StatelessWidget {
   const _SelectedChatLayout({
-    required this.path,
+    required this.file,
     required this.onClear,
     required this.onChange,
     required this.isBusy,
     this.errorMessage,
   });
 
-  final String path;
+  final XFile file;
   final VoidCallback onClear;
   final VoidCallback onChange;
   final bool isBusy;
@@ -174,7 +199,7 @@ class _SelectedChatLayout extends StatelessWidget {
           const SizedBox(height: 10),
           Expanded(
             child: _SelectedShot(
-              path: path,
+              file: file,
               onClear: isBusy ? null : onClear,
             ),
           ),
@@ -198,9 +223,9 @@ class _SelectedChatLayout extends StatelessWidget {
 }
 
 class _SelectedShot extends StatelessWidget {
-  const _SelectedShot({required this.path, required this.onClear});
+  const _SelectedShot({required this.file, required this.onClear});
 
-  final String path;
+  final XFile file;
   final VoidCallback? onClear;
 
   @override
@@ -217,18 +242,7 @@ class _SelectedShot extends StatelessWidget {
             Positioned.fill(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                child: Image.file(
-                  File(path),
-                  fit: BoxFit.fitWidth,
-                  width: double.infinity,
-                  filterQuality: FilterQuality.medium,
-                  errorBuilder: (_, __, ___) => const SizedBox(
-                    height: 200,
-                    child: Center(
-                      child: Icon(Icons.broken_image_outlined),
-                    ),
-                  ),
-                ),
+                child: PickedImagePreview(file: file),
               ),
             ),
             if (onClear != null)

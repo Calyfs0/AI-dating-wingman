@@ -11,7 +11,12 @@ import '../../you/controllers/you_preferences_controller.dart';
 import '../models/suggested_replies.dart';
 
 class GotchuBrandHeader extends StatelessWidget {
-  const GotchuBrandHeader({super.key});
+  const GotchuBrandHeader({
+    super.key,
+    this.outcome = 'Upload a chat → get 2 replies you can send.',
+  });
+
+  final String outcome;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +24,7 @@ class GotchuBrandHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const GotchuLogo(fontSize: 52),
+        const GotchuLogo(fontSize: 48),
         const SizedBox(height: 4),
         Text.rich(
           TextSpan(
@@ -39,7 +44,77 @@ class GotchuBrandHeader extends StatelessWidget {
             ],
           ),
         ),
+        if (outcome.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            outcome,
+            style: body.bodyMedium?.copyWith(
+              color: const Color(0xFFB9AEC8),
+              height: 1.35,
+              fontSize: 14,
+            ),
+          ),
+        ],
       ],
+    );
+  }
+}
+
+/// Privacy trust line near upload CTAs.
+class UploadTrustLine extends StatelessWidget {
+  const UploadTrustLine({
+    super.key,
+    this.text =
+        'Screenshots stay in memory — not stored on your Gotchu account.',
+  });
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.lock_outline_rounded,
+          size: 15,
+          color: AppColors.neonPink.withValues(alpha: 0.85),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF9A8FA8),
+                  height: 1.35,
+                  fontSize: 12,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Quiet tip under the upload zone — what a good shot looks like.
+class UploadHintLine extends StatelessWidget {
+  const UploadHintLine({
+    super.key,
+    this.text =
+        'Tip: crop to the latest messages so the last bubble is easy to read.',
+  });
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: const Color(0xFF7E738F),
+            height: 1.35,
+            fontSize: 12,
+          ),
     );
   }
 }
@@ -153,12 +228,15 @@ class DashedUploadZone extends StatelessWidget {
     this.onTap,
     this.onCameraTap,
     this.onTypeMessageTap,
-    this.title = 'Upload a screenshot of your chat',
-    this.subtitle = "I'll help you figure out what to say.",
+    this.title = 'Upload a screenshot',
+    this.subtitle = 'Get 2 sendable replies in your tone.',
     this.footer = 'iMessage · WhatsApp · Tinder · Hinge',
     this.cameraTitle = 'Take a photo',
     this.cameraSubtitle = 'Snap the chat from another phone',
+    this.typeMessageTitle = 'Type a message instead',
+    this.typeMessageSubtitle = 'Paste what they sent — no screenshot needed',
     this.showTypeMessage = true,
+    this.showCamera = true,
   });
 
   final VoidCallback? onTap;
@@ -169,7 +247,10 @@ class DashedUploadZone extends StatelessWidget {
   final String footer;
   final String cameraTitle;
   final String cameraSubtitle;
+  final String typeMessageTitle;
+  final String typeMessageSubtitle;
   final bool showTypeMessage;
+  final bool showCamera;
 
   @override
   Widget build(BuildContext context) {
@@ -277,19 +358,21 @@ class DashedUploadZone extends StatelessWidget {
                     ),
                   ),
                 ),
-                _UploadZoneDivider(),
-                _UploadZoneRow(
-                  icon: Icons.photo_camera_outlined,
-                  title: cameraTitle,
-                  subtitle: cameraSubtitle,
-                  onTap: onCameraTap,
-                ),
+                if (showCamera) ...[
+                  _UploadZoneDivider(),
+                  _UploadZoneRow(
+                    icon: Icons.photo_camera_outlined,
+                    title: cameraTitle,
+                    subtitle: cameraSubtitle,
+                    onTap: onCameraTap,
+                  ),
+                ],
                 if (showTypeMessage) ...[
                   _UploadZoneDivider(),
                   _UploadZoneRow(
                     icon: Icons.keyboard_alt_outlined,
-                    title: 'Type a message instead',
-                    subtitle: 'Paste or enter the message you received',
+                    title: typeMessageTitle,
+                    subtitle: typeMessageSubtitle,
                     onTap: onTypeMessageTap,
                   ),
                 ],

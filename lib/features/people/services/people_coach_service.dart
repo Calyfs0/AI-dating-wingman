@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 import '../../../core/errors/app_exception.dart';
+import '../../../core/errors/edge_function_errors.dart';
 import '../models/person.dart';
 
 class DateBriefing {
@@ -81,13 +82,13 @@ class PeopleCoachService {
       );
       final data = _asMap(response.data);
       if (response.status >= 400) {
-        throw GenerationException(
-          data['error']?.toString() ?? "Couldn't build that note.",
-        );
+        throw mapEdgeHttpError(response.status, data);
       }
       return data;
     } on AppException {
       rethrow;
+    } on FunctionException catch (e) {
+      throw mapFunctionException(e);
     } catch (e, st) {
       debugPrint('people-coach: ${e.runtimeType}\n$st');
       throw AppExceptionMapper.map(e);

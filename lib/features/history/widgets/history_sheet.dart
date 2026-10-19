@@ -44,36 +44,65 @@ Future<void> showHistorySheet(BuildContext context) {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          'Recent',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Recent',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Saved on this device only — not in your account.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: const Color(0xFF9A8FA8),
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (entries.isNotEmpty)
+                        TextButton(
+                          onPressed: () async {
+                            await history.clear();
+                            if (ctx.mounted) {
+                              HapticFeedback.lightImpact();
+                            }
+                          },
+                          child: Text(
+                            'Clear',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.danger,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
-                      ),
-                      Text(
-                        'On this device only',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          color: const Color(0xFF9A8FA8),
-                        ),
-                      ),
                     ],
                   ),
                 ),
                 Expanded(
                   child: entries.isEmpty
                       ? Center(
-                          child: Text(
-                            'Nothing yet — generate a reply or opener.',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: const Color(0xFFB9AEC8),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              'Nothing saved yet. Lines you generate can show up here — still only on this phone.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.plusJakartaSans(
+                                color: const Color(0xFFB9AEC8),
+                                height: 1.4,
+                              ),
                             ),
                           ),
                         )
@@ -112,11 +141,11 @@ class _HistoryCard extends StatelessWidget {
         color: const Color(0xCC1A1016),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.neonPink.withValues(alpha: 0.18),
+          color: Colors.white.withValues(alpha: 0.08),
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+        padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -127,23 +156,27 @@ class _HistoryCard extends StatelessWidget {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.neonPink,
+                    color: const Color(0xFFB9AEC8),
                   ),
                 ),
                 if (entry.personName != null &&
                     entry.personName!.isNotEmpty) ...[
                   const SizedBox(width: 8),
-                  Text(
-                    '· ${entry.personName}',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      color: const Color(0xFF9A8FA8),
+                  Flexible(
+                    child: Text(
+                      '· ${entry.personName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: const Color(0xFF7E738F),
+                      ),
                     ),
                   ),
                 ],
                 const Spacer(),
                 IconButton(
-                  tooltip: 'Copy natural',
+                  tooltip: 'Copy',
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: preview));
                     HapticFeedback.lightImpact();
@@ -163,33 +196,21 @@ class _HistoryCard extends StatelessWidget {
                   icon: const Icon(
                     Icons.copy_rounded,
                     size: 18,
-                    color: Color(0xFFB9AEC8),
+                    color: Color(0xFF9A8FA8),
                   ),
                 ),
               ],
             ),
             Text(
               preview,
-              maxLines: 3,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
-                color: Colors.white,
+                color: const Color(0xFFE8E0F0),
                 height: 1.35,
               ),
             ),
-            if (entry.hook != null && entry.hook!.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                'Hook: ${entry.hook}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  color: const Color(0xFF9A8FA8),
-                ),
-              ),
-            ],
           ],
         ),
       ),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -49,23 +50,27 @@ Future<void> showNewChatOptionsSheet(BuildContext context) {
               const SizedBox(height: 14),
               _OptionTile(
                 icon: Icons.photo_library_outlined,
-                title: 'Choose from Photos',
-                subtitle: 'Upload a saved screenshot',
+                title: kIsWeb ? 'Choose a file' : 'Choose from Photos',
+                subtitle: kIsWeb
+                    ? 'Upload a chat screenshot from your computer'
+                    : 'Upload a saved screenshot',
                 onTap: () {
                   Navigator.pop(sheetContext);
                   controller.chooseScreenshot();
                 },
               ),
-              const SizedBox(height: 8),
-              _OptionTile(
-                icon: Icons.photo_camera_outlined,
-                title: 'Take a photo',
-                subtitle: 'Snap the chat from another phone',
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  controller.capturePhoto();
-                },
-              ),
+              if (!kIsWeb) ...[
+                const SizedBox(height: 8),
+                _OptionTile(
+                  icon: Icons.photo_camera_outlined,
+                  title: 'Take a photo',
+                  subtitle: 'Snap the chat from another phone',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    controller.capturePhoto();
+                  },
+                ),
+              ],
               const SizedBox(height: 8),
               _OptionTile(
                 icon: Icons.keyboard_alt_outlined,

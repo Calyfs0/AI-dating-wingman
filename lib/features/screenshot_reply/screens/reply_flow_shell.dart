@@ -13,23 +13,38 @@ class ReplyFlowShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final phase = context.watch<ReplyFlowController>().phase;
+    final state = context.watch<ReplyFlowController>().state;
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 280),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      child: switch (phase) {
-        ReplyFlowPhase.upload => const UploadScreenshotScreen(
+      duration: const Duration(milliseconds: 320),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      layoutBuilder: (currentChild, previousChildren) {
+        return Stack(
+          alignment: Alignment.center,
+          children: <Widget>[
+            ...previousChildren,
+            if (currentChild != null) currentChild,
+          ],
+        );
+      },
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
+        );
+      },
+      child: switch (state) {
+        ReplyUploadState() => const UploadScreenshotScreen(
             key: ValueKey('upload'),
           ),
-        ReplyFlowPhase.textEntry => const TypeMessageScreen(
+        ReplyTextEntryState() => const TypeMessageScreen(
             key: ValueKey('textEntry'),
           ),
-        ReplyFlowPhase.generating => const GeneratingRepliesScreen(
+        ReplyGeneratingState() => const GeneratingRepliesScreen(
             key: ValueKey('generating'),
           ),
-        ReplyFlowPhase.results => const SuggestedRepliesScreen(
+        ReplyResultsState() => const SuggestedRepliesScreen(
             key: ValueKey('results'),
           ),
       },

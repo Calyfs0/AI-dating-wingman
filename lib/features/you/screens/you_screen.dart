@@ -1,18 +1,22 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../presentation/widgets/gotchu_logo.dart';
 import '../../history/controllers/history_controller.dart';
 import '../../history/widgets/history_sheet.dart';
-import '../../profile_audit/screens/profile_audit_screen.dart';
+import '../../onboarding/controllers/onboarding_controller.dart';
 import '../../screenshot_reply/models/suggested_replies.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../../usage/usage_controller.dart';
 import '../controllers/you_preferences_controller.dart';
+import '../services/account_service.dart';
 
 class YouScreen extends StatelessWidget {
   const YouScreen({super.key});
@@ -97,13 +101,18 @@ class YouScreen extends StatelessWidget {
                       iconColor: AppColors.neonPink.withValues(alpha: 0.9),
                       title: 'Profile audit',
                       subtitle: 'Scores, photo notes, bio rewrites',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const ProfileAuditScreen(),
-                          ),
-                        );
-                      },
+                      onTap: () => context.push('/profile-audit'),
+                    ),
+                    Divider(
+                      height: 1,
+                      color: AppColors.neonPink.withValues(alpha: 0.12),
+                    ),
+                    _YouLinkRow(
+                      icon: Icons.fitness_center_rounded,
+                      iconColor: const Color(0xFFB9AEC8),
+                      title: 'Practice',
+                      subtitle: 'Low-stakes rehearsal — doesn’t use free credits',
+                      onTap: () => context.push('/practice'),
                     ),
                     Divider(
                       height: 1,
@@ -113,7 +122,9 @@ class YouScreen extends StatelessWidget {
                       icon: Icons.history_rounded,
                       iconColor: const Color(0xFFB9AEC8),
                       title: 'Recent history',
-                      subtitle: '${history.entries.length} on this device',
+                      subtitle: history.entries.isEmpty
+                          ? 'Saved on this device only'
+                          : '${history.entries.length} saved on this device',
                       onTap: () => showHistorySheet(context),
                     ),
                     if (history.entries.isNotEmpty)
@@ -126,7 +137,7 @@ class YouScreen extends StatelessWidget {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    'Local history cleared',
+                                    'Cleared from this device',
                                     style: GoogleFonts.plusJakartaSans(),
                                   ),
                                   behavior: SnackBarBehavior.floating,
@@ -135,7 +146,7 @@ class YouScreen extends StatelessWidget {
                             }
                           },
                           child: Text(
-                            'Clear history',
+                            'Clear on-device history',
                             style: GoogleFonts.plusJakartaSans(
                               color: AppColors.danger,
                               fontWeight: FontWeight.w600,
@@ -211,49 +222,178 @@ class YouScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              _GlassCard(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.lock_outline_rounded,
-                      color: AppColors.neonPink.withValues(alpha: 0.9),
-                      size: 22,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Privacy',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Screenshots are sent briefly for analysis, then discarded — we don’t save them to your account.',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              color: const Color(0xFFB9AEC8),
-                              height: 1.35,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const _PrivacyCard(),
               const SizedBox(height: 18),
               _ProCard(),
+              const SizedBox(height: 18),
+              const _DeleteAccountButton(),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PrivacyCard extends StatelessWidget {
+  const _PrivacyCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _GlassCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.lock_outline_rounded,
+            color: AppColors.neonPink.withValues(alpha: 0.9),
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Privacy & data',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Chat and profile screenshots stay in memory for analysis only — Gotchu does not save them to your account or photo library. Suggested replies you keep in History stay on this device until you clear them.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: const Color(0xFFB9AEC8),
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeleteAccountButton extends StatefulWidget {
+  const _DeleteAccountButton();
+
+  @override
+  State<_DeleteAccountButton> createState() => _DeleteAccountButtonState();
+}
+
+class _DeleteAccountButtonState extends State<_DeleteAccountButton> {
+  bool _busy = false;
+
+  Future<void> _confirmAndDelete() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1324),
+        title: Text(
+          'Delete account?',
+          style: GoogleFonts.plusJakartaSans(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          'This removes your Gotchu cloud data (profile, usage, people on the server) and clears prefs on this device. Screenshots were never stored on your account. This can’t be undone.',
+          style: GoogleFonts.plusJakartaSans(
+            color: const Color(0xFFB9AEC8),
+            height: 1.35,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.plusJakartaSans(color: const Color(0xFFB9AEC8)),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.plusJakartaSans(
+                color: AppColors.danger,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final history = context.read<HistoryController>();
+    final you = context.read<YouPreferencesController>();
+    final usage = context.read<UsageController>();
+    final onboarding = context.read<OnboardingController>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    setState(() => _busy = true);
+    try {
+      await getIt<AccountService>().deleteAccount();
+      await history.clear();
+      await you.load();
+      await usage.load();
+      await onboarding.load();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Account deleted. Starting fresh.',
+            style: GoogleFonts.plusJakartaSans(),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final message = e is AppException
+          ? e.message
+          : 'Couldn’t delete the account. Try again.';
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(message, style: GoogleFonts.plusJakartaSans()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: _busy ? null : _confirmAndDelete,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.danger,
+        side: BorderSide(color: AppColors.danger.withValues(alpha: 0.45)),
+        minimumSize: const Size(0, 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      child: _busy
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.danger,
+              ),
+            )
+          : Text(
+              'Delete account',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+            ),
     );
   }
 }

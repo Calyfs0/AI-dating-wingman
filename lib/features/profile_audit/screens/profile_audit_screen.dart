@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -44,7 +45,7 @@ class _UploadView extends StatelessWidget {
           child: Row(
             children: [
               IconButton(
-                onPressed: () => Navigator.maybePop(context),
+                onPressed: () => context.pop(),
                 icon: const Icon(
                   Icons.arrow_back_ios_new_rounded,
                   size: 18,
