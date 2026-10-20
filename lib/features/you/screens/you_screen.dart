@@ -108,17 +108,6 @@ class YouScreen extends StatelessWidget {
                       color: AppColors.neonPink.withValues(alpha: 0.12),
                     ),
                     _YouLinkRow(
-                      icon: Icons.fitness_center_rounded,
-                      iconColor: const Color(0xFFB9AEC8),
-                      title: 'Practice',
-                      subtitle: 'Low-stakes rehearsal — doesn’t use free credits',
-                      onTap: () => context.push('/practice'),
-                    ),
-                    Divider(
-                      height: 1,
-                      color: AppColors.neonPink.withValues(alpha: 0.12),
-                    ),
-                    _YouLinkRow(
                       icon: Icons.history_rounded,
                       iconColor: const Color(0xFFB9AEC8),
                       title: 'Recent history',
@@ -337,7 +326,7 @@ class _PrivacyCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Chat and profile screenshots stay in memory for analysis only — Kehlo does not save them to your account or photo library. Suggested replies you keep in History stay on this device until you clear them.',
+                  'Chat and profile screenshots stay in memory for analysis only — Kehlo does not save them to your account or photo library. Suggested replies you keep in History stay on this device until you clear them. Practice portraits are AI-generated characters. Any resemblance to a real person is coincidental.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     color: const Color(0xFFB9AEC8),
@@ -414,6 +403,8 @@ class _DeleteAccountButtonState extends State<_DeleteAccountButton> {
     setState(() => _busy = true);
     try {
       await getIt<AccountService>().deleteAccount();
+      if (!mounted) return;
+      await context.read<SubscriptionController>().configureIdentity();
       await history.clear();
       await you.load();
       await usage.load();
@@ -836,17 +827,6 @@ class _ProCardState extends State<_ProCard> {
                       ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: sub.busy ? null : () => _restore(sub),
-                child: Text(
-                  'Restore on another device',
-                  style: GoogleFonts.plusJakartaSans(
-                    color: const Color(0xFFD4C8DE),
-                    fontWeight: FontWeight.w600,
-                  ),
                 ),
               ),
             ],

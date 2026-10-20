@@ -204,23 +204,12 @@ class RevenueCatSubscriptionService implements SubscriptionService {
 
     try {
       await Purchases.purchasePackage(storePackage);
-      // Apple finished. Switch to Monthly immediately; server follows.
-      return const PurchaseResult(
-        success: true,
-        isPro: true,
-        kind: 'subscription',
-        pendingServerConfirm: true,
-      );
+      return await _confirmMonthlyOnServer();
     } on PlatformException catch (e) {
       final code = PurchasesErrorHelper.getErrorCode(e);
-      // Sandbox often says "already subscribed" when Monthly is already owned.
       if (code == PurchasesErrorCode.productAlreadyPurchasedError) {
-        return const PurchaseResult(
-          success: true,
-          isPro: true,
-          kind: 'subscription',
-          pendingServerConfirm: true,
-        );
+        // Apple's "already subscribed" sheet. They own Monthly. Clear Boost.
+        return _confirmMonthlyOnServer(appleSaysOwned: true);
       }
       return _mapPurchaseError(e);
     } on AppException catch (e) {
@@ -236,6 +225,103 @@ class RevenueCatSubscriptionService implements SubscriptionService {
         message: 'Purchase didn’t complete. Try again.',
       );
     }
+  }
+
+  /// Store already took payment, or Apple said this Apple ID already owns Pro.
+  /// Saves Monthly and clears Boost. Does not ask the user to Restore.
+  Future<PurchaseResult> _confirmMonthlyOnServer({
+    bool appleSaysOwned = false,
+  }) async {
+    if (_appUserId != null) {
+      try {
+        await Purchases.logIn(_appUserId!);
+      } catch (e) {
+        debugPrint('RevenueCat logIn: $e');
+      }
+    }
+    try {
+      await Purchases.syncPurchases();
+    } catch (e) {
+      debugPrint('RevenueCat syncPurchases: $e');
+    }
+
+    var sdkMonthly = appleSaysOwned;
+    try {
+      var info = await Purchases.getCustomerInfo();
+      sdkMonthly = sdkMonthly || _sdkHasMonthlyPro(info);
+      if (!sdkMonthly) {
+        try {
+          await Purchases.restorePurchases();
+        } catch (e) {
+          debugPrint('RevenueCat restorePurchases: $e');
+        }
+        try {
+          await Purchases.syncPurchases();
+        } catch (_) {}
+        info = await Purchases.getCustomerInfo();
+        sdkMonthly = _sdkHasMonthlyPro(info);
+      }
+    } catch (e) {
+      debugPrint('RevenueCat customer info: $e');
+    }
+
+    final saved = await syncEntitlement(
+      expectSubscription: true,
+      storeOwnsMonthly: sdkMonthly || appleSaysOwned,
+    );
+    if (saved.isSubscription) return saved;
+    return PurchaseResult(
+      success: false,
+      isPro: saved.isPro,
+      kind: saved.kind,
+      proExpiresAt: saved.proExpiresAt,
+      message: 'Couldn’t switch Pro on. Try again.',
+    );
+  }
+
+  @override
+  Future<PurchaseResult> adoptStorePurchases() async {
+    if (!_canUseStore) return syncEntitlement();
+    try {
+      await Purchases.syncPurchases();
+    } catch (e) {
+      debugPrint('RevenueCat syncPurchases: $e');
+    }
+    CustomerInfo? info;
+    try {
+      info = await Purchases.getCustomerInfo();
+    } catch (e) {
+      debugPrint('RevenueCat customer info: $e');
+    }
+    if (info != null && _sdkHasMonthlyPro(info)) {
+      return syncEntitlement(
+        expectSubscription: true,
+        storeOwnsMonthly: true,
+      );
+    }
+    final current = await syncEntitlement();
+    if (current.isSubscription || current.isPro) return current;
+    final tx = info == null ? null : _latestBoostTransaction(info);
+    if (tx != null) {
+      try {
+        final activated = await _sync.activateBoost(
+          storeTransactionId: tx.transactionIdentifier,
+          productId: tx.productIdentifier,
+        );
+        if (activated.isPro) {
+          return PurchaseResult(
+            success: true,
+            isPro: true,
+            kind: activated.kind,
+            proExpiresAt:
+                activated.isSubscription ? null : activated.proExpiresAt,
+          );
+        }
+      } catch (e) {
+        debugPrint('RevenueCat adopt boost: $e');
+      }
+    }
+    return current;
   }
 
   @override
@@ -270,6 +356,54 @@ class RevenueCatSubscriptionService implements SubscriptionService {
     }
 
     return _purchaseBoostProduct(product);
+  }
+
+  @override
+  Future<DateTime?> purchasePracticeHour() async {
+    if (!_canUseStore) return null;
+    try {
+      final products = await Purchases.getProducts(
+        [AppConstants.practiceHourProductId],
+        productCategory: ProductCategory.nonSubscription,
+      );
+      if (products.isEmpty) {
+        throw const GenerationException(
+          'Practice hour isn’t in the store yet. Try again in a minute.',
+        );
+      }
+      final info = await Purchases.purchaseStoreProduct(products.first);
+      final tx = info.nonSubscriptionTransactions
+          .where(
+            (t) =>
+                t.productIdentifier == AppConstants.practiceHourProductId ||
+                t.productIdentifier.toLowerCase().contains('practice'),
+          )
+          .toList()
+        ..sort((a, b) => b.purchaseDate.compareTo(a.purchaseDate));
+      final id = tx.isEmpty ? null : tx.first.transactionIdentifier;
+      return await _sync.activatePractice(storeTransactionId: id);
+    } on PlatformException catch (e) {
+      final code = PurchasesErrorHelper.getErrorCode(e);
+      if (code == PurchasesErrorCode.purchaseCancelledError) return null;
+      debugPrint('Practice hour purchase: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<String?> practiceHourPrice() async {
+    if (!_canUseStore) return null;
+    try {
+      final products = await Purchases.getProducts(
+        [AppConstants.practiceHourProductId],
+        productCategory: ProductCategory.nonSubscription,
+      );
+      if (products.isEmpty) return null;
+      return products.first.priceString;
+    } catch (e) {
+      debugPrint('Practice hour price: $e');
+      return null;
+    }
   }
 
   Future<PurchaseResult> _purchaseBoostProduct(StoreProduct product) async {
@@ -383,7 +517,10 @@ class RevenueCatSubscriptionService implements SubscriptionService {
   }
 
   @override
-  Future<PurchaseResult> syncEntitlement({bool expectSubscription = false}) async {
+  Future<PurchaseResult> syncEntitlement({
+    bool expectSubscription = false,
+    bool storeOwnsMonthly = false,
+  }) async {
     try {
       String? rcAppUserId;
       if (_canUseStore) {
@@ -396,6 +533,7 @@ class RevenueCatSubscriptionService implements SubscriptionService {
       }
       final synced = await _sync.syncFromRevenueCat(
         expectSubscription: expectSubscription,
+        storeOwnsMonthly: storeOwnsMonthly,
         rcAppUserId: rcAppUserId,
       );
       return _resultFromSync(
@@ -419,12 +557,21 @@ class RevenueCatSubscriptionService implements SubscriptionService {
 
   @override
   Future<PurchaseResult> restore() async {
-    // Always try server sync (covers web / other-device Pro).
-    if (_canUseStore) {
+    if (_canUseStore && _appUserId != null) {
+      try {
+        await Purchases.logIn(_appUserId!);
+      } catch (e) {
+        debugPrint('RevenueCat logIn before restore: $e');
+      }
       try {
         await Purchases.restorePurchases();
       } catch (e) {
         debugPrint('RevenueCat restorePurchases: $e');
+      }
+      try {
+        await Purchases.syncPurchases();
+      } catch (e) {
+        debugPrint('RevenueCat syncPurchases: $e');
       }
     }
 
@@ -432,21 +579,19 @@ class RevenueCatSubscriptionService implements SubscriptionService {
       var sdkMonthly = false;
       if (_canUseStore) {
         try {
-          await Purchases.syncPurchases();
           final info = await Purchases.getCustomerInfo();
           sdkMonthly = _sdkHasMonthlyPro(info);
         } catch (e) {
-          debugPrint('RevenueCat sync before restore: $e');
+          debugPrint('RevenueCat customer info restore: $e');
         }
       }
-      var synced = await _sync.syncFromRevenueCat(
-        expectSubscription: sdkMonthly,
-      );
-      if (sdkMonthly && !synced.isSubscription) {
-        await Future<void>.delayed(const Duration(milliseconds: 1200));
-        synced = await _sync.syncFromRevenueCat(expectSubscription: true);
+      // Monthly first. Never turn an old Boost back on over an active subscription.
+      if (sdkMonthly) {
+        return await _confirmMonthlyOnServer();
       }
-      if (!synced.isSubscription && !synced.isPro && _canUseStore) {
+      final synced = await syncEntitlement(expectSubscription: true);
+      if (synced.isSubscription || synced.isPro) return synced;
+      if (_canUseStore) {
         try {
           final info = await Purchases.getCustomerInfo();
           final tx = _latestBoostTransaction(info);
@@ -469,19 +614,10 @@ class RevenueCatSubscriptionService implements SubscriptionService {
           debugPrint('RevenueCat restore boost: $e');
         }
       }
-      if (sdkMonthly && !synced.isSubscription) {
-        return PurchaseResult(
-          success: false,
-          isPro: synced.isPro,
-          kind: synced.kind,
-          proExpiresAt: synced.isSubscription ? null : synced.proExpiresAt,
-          message:
-              'Monthly isn’t active yet. Boost is still on — try Restore again.',
-        );
-      }
-      return _resultFromSync(
-        synced,
-        notProMessage: 'No active Pro subscription found.',
+      return PurchaseResult(
+        success: false,
+        isPro: false,
+        message: synced.message ?? 'No active Pro subscription found.',
       );
     } on AppException catch (e) {
       return PurchaseResult(
@@ -558,13 +694,26 @@ class FailClosedSubscriptionService implements SubscriptionService {
   }
 
   @override
+  Future<DateTime?> purchasePracticeHour() async => null;
+
+  @override
+  Future<String?> practiceHourPrice() async => null;
+
+  @override
   Future<PurchaseResult> restore() => syncEntitlement();
 
   @override
-  Future<PurchaseResult> syncEntitlement({bool expectSubscription = false}) async {
+  Future<PurchaseResult> adoptStorePurchases() => syncEntitlement();
+
+  @override
+  Future<PurchaseResult> syncEntitlement({
+    bool expectSubscription = false,
+    bool storeOwnsMonthly = false,
+  }) async {
     try {
       final synced = await _sync.syncFromRevenueCat(
         expectSubscription: expectSubscription,
+        storeOwnsMonthly: storeOwnsMonthly,
       );
       return PurchaseResult(
         success: synced.isPro,

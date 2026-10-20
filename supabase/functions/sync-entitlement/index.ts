@@ -7,6 +7,7 @@ const MONTHLY_PRODUCT_ID = "kehlo_pro_monthly";
 type RcSubRow = {
   expires_date?: string | null;
   unsubscribe_detected_at?: string | null;
+  period_type?: string | null;
 };
 
 type RcSubscriber = {
@@ -25,51 +26,51 @@ function isBoostProductId(id: string | undefined | null): boolean {
   return n === "kehlo_boost_1h" || n.includes("boost");
 }
 
-function entitlementActive(
-  entitlements: Record<string, { expires_date?: string | null }> | undefined,
-  id: string,
-): boolean {
-  if (!entitlements) return false;
-  const ent = entitlements[id];
-  if (!ent) return false;
-  const expires = ent.expires_date;
-  if (expires == null || expires === "") return true; // lifetime / non-expiring
-  const t = Date.parse(expires);
-  if (!Number.isFinite(t)) return false;
-  return t > Date.now();
-}
-
-/**
- * Paid access lasts until expires_date.
- * Cancel (unsubscribe_detected_at) does not end Pro early.
- */
-function subscriptionRowActive(sub: RcSubRow | undefined): boolean {
-  if (!sub) return false;
-  const exp = sub.expires_date;
-  if (!exp || exp === "") return !sub.unsubscribe_detected_at;
-  const t = Date.parse(exp);
+function isFuture(raw: string | null | undefined): boolean {
+  if (raw == null || raw === "") return true;
+  const t = Date.parse(raw);
   return Number.isFinite(t) && t > Date.now();
 }
 
-/**
- * Monthly (or any non-Boost) subscription wins over timed Boost.
- * Never demote an active monthly just because `pro` entitlement still
- * points at a Boost product_identifier from an earlier grant.
- */
-function hasSubscriptionPro(payload: RcSubscriber): boolean {
+function subscriptionRowActive(sub: RcSubRow | undefined): boolean {
+  if (!sub) return false;
+  return isFuture(sub.expires_date);
+}
+
+/** Monthly wins even if the `pro` entitlement still names the Boost product. */
+function hasSubscriptionPro(payload: RcSubscriber | null): boolean {
+  if (!payload) return false;
   const subs = payload.subscriber?.subscriptions ?? {};
   if (subscriptionRowActive(subs[MONTHLY_PRODUCT_ID])) return true;
   for (const [productId, row] of Object.entries(subs)) {
     if (isBoostProductId(productId)) continue;
     if (subscriptionRowActive(row)) return true;
   }
+  const ent = payload.subscriber?.entitlements?.[PRO_ENTITLEMENT];
+  if (!ent) return false;
+  if (isBoostProductId(ent.product_identifier)) return false;
+  return isFuture(ent.expires_date);
+}
 
-  const entitlements = payload.subscriber?.entitlements;
-  if (!entitlementActive(entitlements, PRO_ENTITLEMENT)) return false;
-  const entProduct = entitlements?.[PRO_ENTITLEMENT]?.product_identifier;
-  // Boost-only entitlement ≠ Monthly Pro.
-  if (isBoostProductId(entProduct)) return false;
-  return true;
+async function fetchSubscriber(
+  secret: string,
+  appUserId: string,
+): Promise<RcSubscriber | null> {
+  const res = await fetch(
+    `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`RC ${res.status}: ${body.slice(0, 180)}`);
+  }
+  return await res.json() as RcSubscriber;
 }
 
 Deno.serve(async (req) => {
@@ -83,12 +84,34 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Missing authorization", code: "auth" }, 401);
     }
 
+    let expectSubscription = false;
+    let storeOwnsMonthly = false;
+    let rcAppUserId = "";
+    try {
+      if (req.method === "POST") {
+        const raw = await req.json();
+        if (raw && typeof raw === "object") {
+          const body = raw as {
+            expectSubscription?: unknown;
+            storeOwnsMonthly?: unknown;
+            rcAppUserId?: unknown;
+          };
+          expectSubscription = body.expectSubscription === true;
+          storeOwnsMonthly = body.storeOwnsMonthly === true;
+          rcAppUserId = typeof body.rcAppUserId === "string"
+            ? body.rcAppUserId.trim()
+            : "";
+        }
+      }
+    } catch {
+      // empty body is a normal quiet sync
+    }
+
     const userClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       { global: { headers: { Authorization: authHeader } } },
     );
-
     const {
       data: { user },
       error: userError,
@@ -100,160 +123,90 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!serviceKey) {
       return jsonResponse(
-        {
-          error: "Entitlement sync is not configured.",
-          code: "config",
-        },
+        { error: "Entitlement sync is not configured.", code: "config" },
         503,
       );
     }
-
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      serviceKey,
-    );
-
-    let expectSubscription = false;
-    let rcAppUserId = "";
-    try {
-      if (req.method === "POST") {
-        const raw = await req.json();
-        if (raw && typeof raw === "object") {
-          const body = raw as {
-            expectSubscription?: unknown;
-            rcAppUserId?: unknown;
-          };
-          expectSubscription = body.expectSubscription === true;
-          rcAppUserId = typeof body.rcAppUserId === "string"
-            ? body.rcAppUserId.trim()
-            : "";
-        }
-      }
-    } catch {
-      // no body — normal sync
-    }
-
+    const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceKey);
     const rcSecret = Deno.env.get("REVENUECAT_SECRET_KEY")?.trim() ?? "";
-    let subscriptionPro = false;
 
+    const ids = [user.id];
+    if (rcAppUserId && rcAppUserId !== user.id) ids.push(rcAppUserId);
+
+    let subscriptionPro = false;
+    let sawExpiredMonthly = false;
     if (rcSecret) {
-      // After Monthly is bought on top of Boost, REST lags the Store sheet.
-      // Poll here so one purchase call can clear the Boost timer.
-      const attempts = expectSubscription ? 8 : 1;
-      for (let attempt = 0; attempt < attempts; attempt++) {
-        if (attempt > 0) {
-          await new Promise((r) => setTimeout(r, 700));
-        }
-        const ids = [user.id];
-        if (rcAppUserId && rcAppUserId !== user.id) ids.push(rcAppUserId);
-        let sawError = false;
+      const attempts = expectSubscription ? 6 : 1;
+      for (let attempt = 0; attempt < attempts && !subscriptionPro; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 500));
         for (const id of ids) {
-          const rcRes = await fetch(
-            `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(id)}`,
-            {
-              headers: {
-                Authorization: `Bearer ${rcSecret}`,
-                "Content-Type": "application/json",
-              },
-            },
-          );
-          if (rcRes.status === 404) continue;
-          if (!rcRes.ok) {
-            const body = await rcRes.text();
-            console.error(`RC subscriber ${rcRes.status}: ${body.slice(0, 200)}`);
-            sawError = true;
-            continue;
+          try {
+            const payload = await fetchSubscriber(rcSecret, id);
+            if (hasSubscriptionPro(payload)) {
+              subscriptionPro = true;
+              break;
+            }
+            const row = payload?.subscriber?.subscriptions?.[MONTHLY_PRODUCT_ID];
+            if (row && !subscriptionRowActive(row)) sawExpiredMonthly = true;
+          } catch (e) {
+            console.error(`sync-entitlement fetch ${id}: ${e}`);
           }
-          const payload = await rcRes.json() as RcSubscriber;
-          if (hasSubscriptionPro(payload)) {
-            subscriptionPro = true;
-            break;
-          }
-        }
-        if (subscriptionPro) break;
-        if (sawError && attempt === attempts - 1 && !subscriptionPro) {
-          return jsonResponse(
-            {
-              error: "Could not verify subscription. Try again.",
-              code: "revenuecat",
-            },
-            502,
-          );
-        }
-        if (expectSubscription && attempt === attempts - 1) {
-          const keys = Object.keys(payload.subscriber?.subscriptions ?? {});
-          console.error(
-            `sync-entitlement: monthly not visible yet. subKeys=[${keys.join(",")}]`,
-          );
         }
       }
-    } else {
-      subscriptionPro = false;
-      console.warn("sync-entitlement: REVENUECAT_SECRET_KEY unset; is_pro=false");
+    }
+    if (!subscriptionPro && storeOwnsMonthly && !sawExpiredMonthly) {
+      // StoreKit already says this Apple ID owns Monthly (purchase or
+      // "already subscribed"). Clear Boost. REST often lags that dialog.
+      subscriptionPro = true;
     }
 
     const { data: existing, error: readError } = await admin
       .from("profiles")
-      .select("id, pro_expires_at")
+      .select("id, is_pro, pro_expires_at")
       .eq("id", user.id)
       .maybeSingle();
     if (readError) {
-      console.error(`sync-entitlement read: ${readError.message}`);
-      return jsonResponse(
-        { error: "Could not save entitlement.", code: "server" },
-        500,
-      );
+      return jsonResponse({ error: "Could not save entitlement.", code: "server" }, 500);
     }
 
-    const boostExpiresRaw = existing?.pro_expires_at as string | null | undefined;
-    const boostMs = boostExpiresRaw ? Date.parse(boostExpiresRaw) : NaN;
+    const boostRaw = existing?.pro_expires_at as string | null | undefined;
+    const boostMs = boostRaw ? Date.parse(boostRaw) : NaN;
     const boostActive = Number.isFinite(boostMs) && boostMs > Date.now();
+    const alreadyMonthly = existing?.is_pro === true &&
+      (boostRaw == null || boostRaw === "");
 
-    // Subscription wins (clear timed Boost). Else keep active Boost. Else free.
     let isPro = false;
     let proExpiresAt: string | null = null;
     let kind: "subscription" | "boost" | "none" = "none";
 
-    if (subscriptionPro) {
+    if (subscriptionPro || (alreadyMonthly && !sawExpiredMonthly)) {
       isPro = true;
       proExpiresAt = null;
       kind = "subscription";
     } else if (boostActive) {
       isPro = true;
-      proExpiresAt = boostExpiresRaw ?? null;
+      proExpiresAt = boostRaw ?? null;
       kind = "boost";
-    } else {
-      isPro = false;
-      proExpiresAt = null;
-      kind = "none";
     }
 
     if (existing) {
-      const { error: updateError } = await admin
+      const { error } = await admin
         .from("profiles")
         .update({ is_pro: isPro, pro_expires_at: proExpiresAt })
         .eq("id", user.id);
-      if (updateError) {
-        console.error(`sync-entitlement update: ${updateError.message}`);
-        return jsonResponse(
-          { error: "Could not save entitlement.", code: "server" },
-          500,
-        );
+      if (error) {
+        return jsonResponse({ error: "Could not save entitlement.", code: "server" }, 500);
       }
     } else {
-      const { error: insertError } = await admin.from("profiles").insert({
+      const { error } = await admin.from("profiles").insert({
         id: user.id,
         display_name: "You",
         is_anonymous: user.is_anonymous ?? true,
         is_pro: isPro,
         pro_expires_at: proExpiresAt,
       });
-      if (insertError) {
-        console.error(`sync-entitlement insert: ${insertError.message}`);
-        return jsonResponse(
-          { error: "Could not save entitlement.", code: "server" },
-          500,
-        );
+      if (error) {
+        return jsonResponse({ error: "Could not save entitlement.", code: "server" }, 500);
       }
     }
 

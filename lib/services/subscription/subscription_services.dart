@@ -10,10 +10,23 @@ abstract class SubscriptionService {
   /// Consumable Boost (`kehlo_boost_1h`) → server grants 1h Pro.
   Future<PurchaseResult> purchaseBoost();
 
+  /// Consumable practice hour (`kehlo_practice_1h`). Does not grant Pro.
+  Future<DateTime?> purchasePracticeHour();
+
+  /// Store price label, e.g. ₹49. Null if the store has not loaded it.
+  Future<String?> practiceHourPrice();
+
   Future<PurchaseResult> restore();
 
   /// Pull RC → server profiles (cancels, renewals, other-device Pro).
-  Future<PurchaseResult> syncEntitlement({bool expectSubscription = false});
+  Future<PurchaseResult> syncEntitlement({
+    bool expectSubscription = false,
+    bool storeOwnsMonthly = false,
+  });
+
+  /// Read the App Store receipt already on this device and save Pro/Boost.
+  /// Runs on launch so a reinstall does not need Restore.
+  Future<PurchaseResult> adoptStorePurchases();
 
   /// Fired when the store reports entitlement changes (optional).
   void setEntitlementChangeHandler(void Function()? handler);
@@ -156,6 +169,12 @@ class LocalSubscriptionService implements SubscriptionService {
   }
 
   @override
+  Future<DateTime?> purchasePracticeHour() async => null;
+
+  @override
+  Future<String?> practiceHourPrice() async => null;
+
+  @override
   Future<PurchaseResult> restore() async {
     return PurchaseResult(
       success: _entitlement.isPro,
@@ -165,7 +184,13 @@ class LocalSubscriptionService implements SubscriptionService {
   }
 
   @override
-  Future<PurchaseResult> syncEntitlement({bool expectSubscription = false}) async {
+  Future<PurchaseResult> adoptStorePurchases() => syncEntitlement();
+
+  @override
+  Future<PurchaseResult> syncEntitlement({
+    bool expectSubscription = false,
+    bool storeOwnsMonthly = false,
+  }) async {
     return PurchaseResult(
       success: _entitlement.isPro,
       isPro: _entitlement.isPro,

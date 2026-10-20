@@ -286,6 +286,10 @@ Deno.serve(async (req) => {
           if (Number.isFinite(t) && t > Date.now()) {
             grantedUntil = existing.granted_until;
             redeemedTx = txId;
+            await admin
+              .from("profiles")
+              .update({ is_pro: true, pro_expires_at: existing.granted_until })
+              .eq("id", user.id);
           }
         }
         continue;

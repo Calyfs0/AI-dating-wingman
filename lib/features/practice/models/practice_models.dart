@@ -8,11 +8,17 @@ enum PracticePersona {
   maya,
   elena,
   sofia,
+  priya,
+  helen,
+  ruth,
   // Male
   jake,
   noah,
   marcus,
   dylan,
+  andre,
+  victor,
+  sam,
 }
 
 extension PracticePersonaCopy on PracticePersona {
@@ -20,12 +26,18 @@ extension PracticePersonaCopy on PracticePersona {
         PracticePersona.mia ||
         PracticePersona.maya ||
         PracticePersona.elena ||
-        PracticePersona.sofia =>
+        PracticePersona.sofia ||
+        PracticePersona.priya ||
+        PracticePersona.helen ||
+        PracticePersona.ruth =>
           PracticeGender.female,
         PracticePersona.jake ||
         PracticePersona.noah ||
         PracticePersona.marcus ||
-        PracticePersona.dylan =>
+        PracticePersona.dylan ||
+        PracticePersona.andre ||
+        PracticePersona.victor ||
+        PracticePersona.sam =>
           PracticeGender.male,
       };
 
@@ -34,22 +46,33 @@ extension PracticePersonaCopy on PracticePersona {
         PracticePersona.maya => 'Maya',
         PracticePersona.elena => 'Elena',
         PracticePersona.sofia => 'Sofia',
+        PracticePersona.priya => 'Priya',
+        PracticePersona.helen => 'Helen',
+        PracticePersona.ruth => 'Ruth',
         PracticePersona.jake => 'Jake',
         PracticePersona.noah => 'Noah',
         PracticePersona.marcus => 'Marcus',
         PracticePersona.dylan => 'Dylan',
+        PracticePersona.andre => 'Andre',
+        PracticePersona.victor => 'Victor',
+        PracticePersona.sam => 'Sam',
       };
 
-  /// Short archetype chip on the card.
-  String get archetype => switch (this) {
-        PracticePersona.mia => 'Girl',
-        PracticePersona.maya => 'Woman',
-        PracticePersona.elena => 'Office',
-        PracticePersona.sofia => 'Gym',
-        PracticePersona.jake => 'Boy',
-        PracticePersona.noah => 'Man',
-        PracticePersona.marcus => 'Office',
-        PracticePersona.dylan => 'Gym',
+  int get age => switch (this) {
+        PracticePersona.mia => 22,
+        PracticePersona.maya => 28,
+        PracticePersona.elena => 30,
+        PracticePersona.sofia => 26,
+        PracticePersona.priya => 42,
+        PracticePersona.helen => 51,
+        PracticePersona.ruth => 63,
+        PracticePersona.jake => 22,
+        PracticePersona.noah => 29,
+        PracticePersona.marcus => 32,
+        PracticePersona.dylan => 28,
+        PracticePersona.andre => 41,
+        PracticePersona.victor => 54,
+        PracticePersona.sam => 60,
       };
 
   String get blurb => switch (this) {
@@ -57,10 +80,16 @@ extension PracticePersonaCopy on PracticePersona {
         PracticePersona.maya => 'Warm, sharp, a little playful.',
         PracticePersona.elena => 'Polished. Busy calendar. Direct texts.',
         PracticePersona.sofia => 'Protein shakes & early alarms. Flirty when free.',
+        PracticePersona.priya => 'Settled, warm, doesn’t do games.',
+        PracticePersona.helen => 'Dry wit. Knows what she wants.',
+        PracticePersona.ruth => 'Unhurried. Clear. Kind, not coy.',
         PracticePersona.jake => 'Chill college energy. Short replies, memes.',
         PracticePersona.noah => 'Easy energy. Dry humor. Late-night texts.',
         PracticePersona.marcus => 'Work-day pace. Polite, measured, adult.',
         PracticePersona.dylan => 'Leg day jokes. High energy. Plans around the gym.',
+        PracticePersona.andre => 'Steady. Funny without trying.',
+        PracticePersona.victor => 'Direct. A little formal. Good plans.',
+        PracticePersona.sam => 'Easy pace. Short texts. No drama.',
       };
 
   /// Hint for the edge model — how this person texts.
@@ -73,6 +102,12 @@ extension PracticePersonaCopy on PracticePersona {
           'Professional woman ~30. Polished, a bit busy, clear and direct. Fewer emoji.',
         PracticePersona.sofia =>
           'Athletic woman ~26. Gym lifestyle, upbeat, fit-focused humor. Mentions workouts casually. Light emoji OK.',
+        PracticePersona.priya =>
+          'Woman 42. Warm, settled, low games. Complete sentences. Rare emoji.',
+        PracticePersona.helen =>
+          'Woman 51. Dry wit, confident, knows what she wants. Short and clear.',
+        PracticePersona.ruth =>
+          'Woman 63. Unhurried, kind, direct. No slang, no emoji. Gentle humor.',
         PracticePersona.jake =>
           'Young man ~22. Chill, informal, short. Occasional slang. Light emoji OK.',
         PracticePersona.noah =>
@@ -81,18 +116,38 @@ extension PracticePersonaCopy on PracticePersona {
           'Professional man ~32. Polite, measured, adult. Complete thoughts, low emoji.',
         PracticePersona.dylan =>
           'Athletic man ~28. Gym bro energy but friendly. Short, high-energy texts. Leg-day / PR jokes OK.',
+        PracticePersona.andre =>
+          'Man 41. Steady, warm humor, adult dating pace. Few emoji.',
+        PracticePersona.victor =>
+          'Man 54. Direct, a bit formal, makes real plans. No slang.',
+        PracticePersona.sam =>
+          'Man 60. Easy pace, short texts, no drama. Plain language.',
       };
 
-  String get imageAsset => switch (this) {
-        PracticePersona.mia => 'assets/images/practice/mia.jpg',
-        PracticePersona.maya => 'assets/images/practice/maya.jpg',
-        PracticePersona.elena => 'assets/images/practice/elena.jpg',
-        PracticePersona.sofia => 'assets/images/practice/sofia.jpg',
-        PracticePersona.jake => 'assets/images/practice/jake.jpg',
-        PracticePersona.noah => 'assets/images/practice/noah.jpg',
-        PracticePersona.marcus => 'assets/images/practice/marcus.jpg',
-        PracticePersona.dylan => 'assets/images/practice/dylan.jpg',
-      };
+  String get imageAsset => imageAssets.first;
+
+  List<String> get imageAssets {
+    final base = switch (this) {
+      PracticePersona.mia => 'mia',
+      PracticePersona.maya => 'maya',
+      PracticePersona.elena => 'elena',
+      PracticePersona.sofia => 'sofia',
+      PracticePersona.jake => 'jake',
+      PracticePersona.noah => 'noah',
+      PracticePersona.marcus => 'marcus',
+      PracticePersona.dylan => 'dylan',
+      PracticePersona.priya => 'priya',
+      PracticePersona.helen => 'helen',
+      PracticePersona.ruth => 'ruth',
+      PracticePersona.andre => 'andre',
+      PracticePersona.victor => 'victor',
+      PracticePersona.sam => 'sam',
+    };
+    return [
+      'assets/images/practice/$base.jpg',
+      'assets/images/practice/${base}_2.jpg',
+    ];
+  }
 
   static List<PracticePersona> forGender(PracticeGender gender) =>
       PracticePersona.values.where((p) => p.gender == gender).toList();

@@ -32,6 +32,7 @@ class EntitlementSyncService {
   /// [expectSubscription] asks the server to wait for a Monthly row to replace Boost.
   Future<EntitlementSyncResult> syncFromRevenueCat({
     bool expectSubscription = false,
+    bool storeOwnsMonthly = false,
     String? rcAppUserId,
   }) async {
     try {
@@ -39,6 +40,7 @@ class EntitlementSyncService {
         'sync-entitlement',
         body: {
           if (expectSubscription) 'expectSubscription': true,
+          if (storeOwnsMonthly) 'storeOwnsMonthly': true,
           if (rcAppUserId != null && rcAppUserId.isNotEmpty)
             'rcAppUserId': rcAppUserId,
         },
@@ -110,6 +112,37 @@ class EntitlementSyncService {
             ? DateTime.tryParse(expiresRaw)?.toUtc()
             : null,
       );
+    } on FunctionException catch (e) {
+      throw mapFunctionException(e);
+    } on AppException {
+      rethrow;
+    } catch (e) {
+      throw AppExceptionMapper.map(e);
+    }
+  }
+
+  /// Redeems `kehlo_practice_1h`. Does not change Pro.
+  Future<DateTime?> activatePractice({String? storeTransactionId}) async {
+    try {
+      final response = await _client.functions.invoke(
+        'activate-practice',
+        body: {
+          if (storeTransactionId != null && storeTransactionId.isNotEmpty)
+            'storeTransactionId': storeTransactionId,
+        },
+      );
+      final data = response.data;
+      if (data is! Map) {
+        throw const GenerationException('Couldn’t start the practice hour.');
+      }
+      final map = Map<String, dynamic>.from(data);
+      if (response.status >= 400) {
+        throw mapEdgeHttpError(response.status, map);
+      }
+      final raw = map['practiceExpiresAt'] as String?;
+      return raw != null && raw.isNotEmpty
+          ? DateTime.tryParse(raw)?.toUtc()
+          : null;
     } on FunctionException catch (e) {
       throw mapFunctionException(e);
     } on AppException {

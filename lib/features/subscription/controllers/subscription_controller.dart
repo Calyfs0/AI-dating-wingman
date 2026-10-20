@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/errors/app_exception.dart';
 import '../../../services/subscription/subscription_services.dart';
 import '../../usage/usage_controller.dart';
 
@@ -27,6 +28,7 @@ class SubscriptionController extends ChangeNotifier {
   /// Shown on the full-screen purchase lock (empty when idle).
   String busyMessage = '';
   String? lastError;
+  String? practiceHourPriceLabel;
   List<SubscriptionOffering> offerings = const [];
 
   DateTime? _lastQuietSyncAt;
@@ -55,8 +57,14 @@ class SubscriptionController extends ChangeNotifier {
     await _subscription.configure(appUserId: uid);
     configured = true;
     await refreshOfferings();
-    // Drop cancelled Monthly / pick up other-device Pro on every cold start.
-    await syncEntitlement(quiet: true);
+    try {
+      practiceHourPriceLabel = await _subscription.practiceHourPrice();
+    } catch (e) {
+      debugPrint('Practice hour price: $e');
+    }
+    // Receipt already on the phone → Pro or Boost, no Restore tap.
+    final adopted = await _subscription.adoptStorePurchases();
+    await _applyPurchaseResult(adopted);
   }
 
   Future<void> refreshOfferings() async {
@@ -102,31 +110,8 @@ class SubscriptionController extends ChangeNotifier {
   }
 
   Future<void> _applyPurchaseResult(PurchaseResult result) async {
-    if (result.pendingServerConfirm) {
-      _usage.keepMonthlyUntilServerAgrees();
-    }
-    await _usage.setPro(
-      result.isPro,
-      expiresAt: result.proExpiresAt,
-      serverSubscription: result.isSubscription && !result.pendingServerConfirm,
-    );
+    await _usage.setPro(result.isPro, expiresAt: result.proExpiresAt);
     await _usage.refreshFromServer();
-    if (result.pendingServerConfirm) {
-      unawaited(_catchUpMonthly());
-    }
-  }
-
-  Future<void> _catchUpMonthly() async {
-    for (var i = 0; i < 12; i++) {
-      await Future<void>.delayed(const Duration(seconds: 2));
-      final result = await _subscription.syncEntitlement(
-        expectSubscription: true,
-      );
-      if (!result.isSubscription) continue;
-      await _usage.setPro(true, expiresAt: null, serverSubscription: true);
-      await _usage.refreshFromServer();
-      return;
-    }
   }
 
   Future<bool> purchase(SubscriptionPackage package) async {
@@ -175,6 +160,27 @@ class SubscriptionController extends ChangeNotifier {
       lastError = result.success ? null : result.message;
       notifyListeners();
       return result.success;
+    } finally {
+      busy = false;
+      busyMessage = '';
+      notifyListeners();
+    }
+  }
+
+  /// Buys one more hour of the current practice chat. Does not change Pro.
+  Future<DateTime?> purchasePracticeHour() async {
+    if (busy) return null;
+    busy = true;
+    busyMessage = 'Continuing practice…';
+    lastError = null;
+    notifyListeners();
+    try {
+      return await _subscription.purchasePracticeHour();
+    } on Exception catch (e) {
+      lastError = e is AppException
+          ? e.message
+          : 'Practice hour didn’t start. Try again.';
+      return null;
     } finally {
       busy = false;
       busyMessage = '';

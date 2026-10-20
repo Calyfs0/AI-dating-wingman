@@ -10,8 +10,7 @@ import '../openers/controllers/openers_flow_controller.dart';
 import '../people/controllers/people_controller.dart';
 import '../screenshot_reply/controllers/reply_flow_controller.dart';
 
-/// Root shell: Reply · Openers · People · You
-/// Practice lives under You → /practice (secondary).
+/// Root shell: Reply · Openers · Practice · People · You
 class CompanionShell extends StatelessWidget {
   const CompanionShell({super.key, required this.navigationShell});
 
@@ -43,10 +42,11 @@ class CompanionNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  /// 0 Reply · 1 Openers · 2 People · 3 You
+  /// 0 Reply · 1 Openers · 2 Practice · 3 People · 4 You
   static const _items = [
     (Icons.auto_awesome_rounded, 'Reply'),
     (Icons.waving_hand_outlined, 'Openers'),
+    (Icons.forum_outlined, 'Practice'),
     (Icons.favorite_border_rounded, 'People'),
     (Icons.person_outline_rounded, 'You'),
   ];
@@ -87,7 +87,7 @@ class CompanionNavBar extends StatelessWidget {
                         icon: _items[i].$1,
                         label: _items[i].$2,
                         selected: currentIndex == i,
-                        badgeCount: i == 2 ? yourMove : 0,
+                        badgeCount: i == 3 ? yourMove : 0,
                         onTap: () => onTap(i),
                       ),
                     ),

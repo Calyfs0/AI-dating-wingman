@@ -135,6 +135,14 @@ class PracticeController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Back into the same person, topic, and thread after a paid hour.
+  void continueScene() {
+    feedback = null;
+    errorMessage = null;
+    phase = PracticePhase.session;
+    notifyListeners();
+  }
+
   void backToTopics() {
     _turnToken++;
     topic = null;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../subscription/controllers/subscription_controller.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../../screenshot_reply/widgets/mockup_components.dart';
 import '../controllers/practice_controller.dart';
@@ -91,6 +94,15 @@ class _PersonasView extends StatelessWidget {
           style: GoogleFonts.plusJakartaSans(
             fontSize: 14,
             color: const Color(0xFFB9AEC8),
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Portraits are AI-generated. Any resemblance to a real person is coincidental.',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            color: const Color(0xFF8A8098),
             height: 1.35,
           ),
         ),
@@ -241,19 +253,7 @@ class _PersonaCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.asset(
-                        persona.imageAsset,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: const Color(0xFF2A1F30),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            Icons.person_rounded,
-                            size: 48,
-                            color: Colors.white.withValues(alpha: 0.35),
-                          ),
-                        ),
-                      ),
+                      _PersonaSlideshow(assets: persona.imageAssets),
                       Positioned(
                         left: 0,
                         right: 0,
@@ -284,7 +284,7 @@ class _PersonaCard extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  persona.archetype,
+                                  '${persona.age}',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -331,6 +331,58 @@ class _PersonaCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PersonaSlideshow extends StatefulWidget {
+  const _PersonaSlideshow({required this.assets});
+
+  final List<String> assets;
+
+  @override
+  State<_PersonaSlideshow> createState() => _PersonaSlideshowState();
+}
+
+class _PersonaSlideshowState extends State<_PersonaSlideshow> {
+  Timer? _timer;
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.assets.length < 2) return;
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted) return;
+      setState(() => _index = (_index + 1) % widget.assets.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final asset = widget.assets[_index.clamp(0, widget.assets.length - 1)];
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 700),
+      child: Image.asset(
+        asset,
+        key: ValueKey(asset),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          color: const Color(0xFF2A1F30),
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.person_rounded,
+            size: 48,
+            color: Colors.white.withValues(alpha: 0.35),
           ),
         ),
       ),
@@ -736,6 +788,8 @@ class _FeedbackView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
+        _KeepGoingButton(controller: c),
+        const SizedBox(height: 10),
         NeonGenerateButton(
           label: 'Done — new session',
           onPressed: () {
@@ -765,6 +819,50 @@ class _FeedbackView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _KeepGoingButton extends StatelessWidget {
+  const _KeepGoingButton({required this.controller});
+
+  final PracticeController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = context.watch<SubscriptionController>();
+    final price = sub.practiceHourPriceLabel ?? '₹49';
+    return NeonGenerateButton(
+      label: sub.busy ? 'Continuing…' : 'Keep going · $price',
+      onPressed: sub.busy
+          ? null
+          : () async {
+              HapticFeedback.mediumImpact();
+              final until = await sub.purchasePracticeHour();
+              if (!context.mounted) return;
+              if (until != null && until.isAfter(DateTime.now())) {
+                controller.continueScene();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Same chat, one more hour.',
+                      style: GoogleFonts.plusJakartaSans(),
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
+              final err = sub.lastError;
+              if (err != null && err.isNotEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(err, style: GoogleFonts.plusJakartaSans()),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
     );
   }
 }

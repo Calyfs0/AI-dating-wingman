@@ -37,9 +37,6 @@ class UsageController extends ChangeNotifier {
 
   Timer? _boostTicker;
 
-  /// Store already charged Monthly. Don't let a stale Boost expiry overwrite it.
-  bool _keepMonthly = false;
-
   int get dailyLimit => isPro ? proDailyLimit : freeDailyLimit;
   int get remaining => (dailyLimit - usedToday).clamp(0, dailyLimit);
   bool get canGenerate => remaining > 0;
@@ -206,14 +203,6 @@ class UsageController extends ChangeNotifier {
     } else if (proExpiresAt != null) {
       this.proExpiresAt = proExpiresAt.toUtc();
     }
-    // Only a profile with Pro and no expiry means Monthly has landed.
-    // A generation payload can also have a null expiry — don't drop the hold then.
-    if (_keepMonthly && isPro && clearExpiry) {
-      _keepMonthly = false;
-    } else if (_keepMonthly) {
-      this.isPro = true;
-      this.proExpiresAt = null;
-    }
     if (this.isPro) _applyExpiryLocal();
     usedToday = used.clamp(0, limit > 0 ? limit : used);
     _day = utcDayStamp();
@@ -305,24 +294,9 @@ class UsageController extends ChangeNotifier {
     }
   }
 
-  void keepMonthlyUntilServerAgrees() {
-    _keepMonthly = true;
-  }
-
   /// [expiresAt] null while [value] is true = Monthly / non-expiring Pro
   /// (clears any leftover Boost timer).
-  Future<void> setPro(
-    bool value, {
-    DateTime? expiresAt,
-    bool serverSubscription = false,
-  }) async {
-    if (serverSubscription && value && expiresAt == null) {
-      _keepMonthly = false;
-    }
-    if (_keepMonthly && !serverSubscription) {
-      value = true;
-      expiresAt = null;
-    }
+  Future<void> setPro(bool value, {DateTime? expiresAt}) async {
     isPro = value;
     if (!value) {
       proExpiresAt = null;

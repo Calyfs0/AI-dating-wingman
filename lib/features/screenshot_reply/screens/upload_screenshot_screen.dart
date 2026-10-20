@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../people/widgets/your_move_banner.dart';
+import '../../practice/widgets/practice_entry_line.dart';
 import '../../subscription/widgets/usage_limit_callout.dart';
 import '../controllers/reply_flow_controller.dart';
 import '../widgets/desire_backdrop.dart';
@@ -68,8 +69,8 @@ class _UploadScreenshotScreenState extends State<UploadScreenshotScreen> {
                     : ListView(
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                         children: [
-                          const KehloBrandHeader(),
-                          const SizedBox(height: 14),
+                          const KehloBrandHeader(outcome: ''),
+                          const SizedBox(height: 18),
                           const YourMoveBanner(),
                           if (controller.attachedPerson != null) ...[
                             _AttachedPersonChip(
@@ -96,21 +97,9 @@ class _UploadScreenshotScreenState extends State<UploadScreenshotScreen> {
                             subtitle:
                                 'Get 2 natural replies you can copy and send.',
                           ),
-                          const SizedBox(height: 12),
-                          const UploadTrustLine(),
-                          const SizedBox(height: 8),
-                          const UploadHintLine(),
-                          const SizedBox(height: 18),
-                          Text(
-                            'Default vibe',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF7E738F),
-                            ),
+                          const PracticeEntryLine(
+                            label: 'No chat yet? Practice with someone',
                           ),
-                          const SizedBox(height: 8),
-                          const MoodChipRow(),
                           if (controller.errorMessage != null) ...[
                             const SizedBox(height: 14),
                             if (isUsageLimitMessage(controller.errorMessage))
@@ -133,24 +122,15 @@ class _UploadScreenshotScreenState extends State<UploadScreenshotScreen> {
                         ],
                       ),
               ),
-              Padding(
+              if (hasImage)
+                Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                 child: NeonGenerateButton(
-                  label: hasImage
-                      ? 'Generate replies'
-                      : (kIsWeb
-                          ? 'Choose screenshot'
-                          : 'Upload screenshot'),
+                  label: 'Generate replies',
                   isLoading: controller.isBusy,
                   onPressed: controller.isBusy
                       ? null
-                      : () {
-                          if (controller.selectedImage == null) {
-                            controller.chooseScreenshot();
-                          } else {
-                            controller.generateReplies();
-                          }
-                        },
+                      : controller.generateReplies,
                 ),
               ),
             ],

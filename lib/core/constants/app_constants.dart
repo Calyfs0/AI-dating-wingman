@@ -10,6 +10,10 @@ abstract final class AppConstants {
   static const String boostProductId = 'kehlo_boost_1h';
   static const int boostDurationHours = 1;
 
+  /// Consumable — continue the current practice chat for 1 hour. Not Pro.
+  static const String practiceHourProductId = 'kehlo_practice_1h';
+  static const int practiceFreeUserTurns = 10;
+
   static const int maxScreenshots = 10;
   static const int maxScreenshotBytes = 8 * 1024 * 1024;
   static const Duration aiTimeout = Duration(seconds: 45);

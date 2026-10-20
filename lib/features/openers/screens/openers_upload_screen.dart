@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../practice/widgets/practice_entry_line.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../../screenshot_reply/widgets/mockup_components.dart';
 import '../../screenshot_reply/widgets/picked_image_preview.dart';
@@ -177,24 +178,9 @@ class OpenersUploadScreen extends StatelessWidget {
                             cameraSubtitle:
                                 'Snap their profile from another phone',
                           ),
-                          const SizedBox(height: 12),
-                          const UploadTrustLine(),
-                          const SizedBox(height: 8),
-                          const UploadHintLine(
-                            text:
-                                'Tip: include name + prompts/bio so the opener can reference something real.',
+                          const PracticeEntryLine(
+                            label: 'No profile yet? Practice a first message',
                           ),
-                          const SizedBox(height: 18),
-                          Text(
-                            'Default vibe',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF7E738F),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const MoodChipRow(),
                           if (c.errorMessage != null) ...[
                             const SizedBox(height: 14),
                             if (isUsageLimitMessage(c.errorMessage))

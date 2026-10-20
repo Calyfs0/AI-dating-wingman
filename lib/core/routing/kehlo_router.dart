@@ -15,8 +15,7 @@ final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Path-based routes for mobile + web (GitHub Pages base-href compatible).
 ///
-/// Primary tabs: Reply · Openers · People · You.
-/// Practice is a secondary full-screen route (entered from You).
+/// Primary tabs: Reply · Openers · Practice · People · You.
 GoRouter createKehloRouter({
   required OnboardingController onboarding,
 }) {
@@ -65,6 +64,16 @@ GoRouter createKehloRouter({
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/practice',
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: PracticeScreen(),
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: '/people',
                 pageBuilder: (context, state) => const NoTransitionPage(
                   child: PeopleScreen(),
@@ -83,11 +92,6 @@ GoRouter createKehloRouter({
             ],
           ),
         ],
-      ),
-      GoRoute(
-        parentNavigatorKey: rootNavigatorKey,
-        path: '/practice',
-        builder: (context, state) => const PracticeScreen(),
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,

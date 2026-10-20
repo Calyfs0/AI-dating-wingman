@@ -296,7 +296,7 @@ class _PrivacyStep extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Screenshots are analyzed in memory and are not stored on your Kehlo account. History you keep stays on this device — clear it anytime in You.',
+          'Screenshots are analyzed in memory and are not stored on your Kehlo account. History you keep stays on this device — clear it anytime in You. Practice portraits are AI-generated. Any resemblance to a real person is coincidental.',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 15,
             color: const Color(0xFFB9AEC8),

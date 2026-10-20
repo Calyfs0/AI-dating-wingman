@@ -101,7 +101,17 @@ Deno.serve(async (req) => {
     const history = Array.isArray(body.history) ? body.history : [];
     const userTurns =
       history.filter((h: { role?: string }) => h?.role === "user").length + 1;
-    const forceDone = userTurns >= 4;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("practice_expires_at")
+      .eq("id", user.id)
+      .maybeSingle();
+    const practiceRaw = profile?.practice_expires_at as string | null | undefined;
+    const practiceMs = practiceRaw ? Date.parse(practiceRaw) : NaN;
+    const extended = Number.isFinite(practiceMs) && practiceMs > Date.now();
+    const freeTurnCap = 10;
+    const forceDone = !extended && userTurns >= freeTurnCap;
 
     const transcript = history
       .slice(-10)
@@ -124,7 +134,9 @@ CRITICAL:
 - NEVER say you are an AI, Kehlo, or practice mode.
 - React to what THEY just said like a real match would.
 - 1–2 short lines max. Fragments OK. Emoji only if it fits this persona.
-- After about 3–4 user messages, or if they clearly land a plan / close the loop, end the scene.
+- ${extended
+      ? "The user paid to keep this scene going. Do NOT end the scene. Always done:false. Stay in the conversation."
+      : "After about 10 user messages, or if they clearly land a plan / close the loop, end the scene."}
 
 ${SAFETY_RULES}
 - If their message is clearly harmful / non-consensual, end the scene (done:true) with a short in-character deflection and feedback that notes the line crossed — still no lecture.
@@ -149,7 +161,7 @@ When ending — feedback rules (critical):
     const ai = await chatJson({ system, user: userPrompt });
 
     let personaLine = String(ai.personaLine ?? "").trim();
-    const done = ai.done === true || forceDone;
+    const done = extended ? false : (ai.done === true || forceDone);
     if (!personaLine && !done) {
       personaLine = "haha wait say more";
     }
