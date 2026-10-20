@@ -9,7 +9,8 @@ import '../models/history_entry.dart';
 class HistoryController extends ChangeNotifier {
   HistoryController({this.maxEntries = 20});
 
-  static const _storageKey = 'gotchu_history_v1';
+  static const _storageKey = 'kehlo_history_v1';
+  static const _gotchuStorageKey = 'gotchu_history_v1';
 
   final int maxEntries;
   final List<HistoryEntry> _entries = [];
@@ -20,9 +21,18 @@ class HistoryController extends ChangeNotifier {
   List<HistoryEntry> forPerson(String personId) =>
       _entries.where((e) => e.personId == personId).toList(growable: false);
 
+  /// Soft retention pulse — lines saved this calendar week (local).
+  int get unstucksThisWeek {
+    final now = DateTime.now();
+    final start = now.subtract(Duration(days: now.weekday - 1));
+    final weekStart = DateTime(start.year, start.month, start.day);
+    return _entries.where((e) => !e.createdAt.isBefore(weekStart)).length;
+  }
+
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey);
+    final raw = prefs.getString(_storageKey) ??
+        prefs.getString(_gotchuStorageKey);
     _entries.clear();
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -31,6 +41,10 @@ class HistoryController extends ChangeNotifier {
           if (item is Map) {
             _entries.add(HistoryEntry.fromJson(Map<String, dynamic>.from(item)));
           }
+        }
+        if (prefs.containsKey(_gotchuStorageKey)) {
+          await prefs.setString(_storageKey, raw);
+          await prefs.remove(_gotchuStorageKey);
         }
       } catch (e) {
         debugPrint('history load: ${e.runtimeType}');

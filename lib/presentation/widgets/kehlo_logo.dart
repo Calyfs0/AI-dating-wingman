@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 
-/// Gotchu wordmark — neon cursive script (no image plate).
-class GotchuLogo extends StatelessWidget {
-  const GotchuLogo({
+/// Kehlo wordmark — neon cursive script (no image plate).
+class KehloLogo extends StatelessWidget {
+  const KehloLogo({
     super.key,
     this.fontSize = 56,
     this.showHeart = true,
@@ -24,7 +24,7 @@ class GotchuLogo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Gotchu',
+          'Kehlo',
           style: AppTypography.brandScript.copyWith(fontSize: fontSize),
         ),
         if (showHeart) ...[

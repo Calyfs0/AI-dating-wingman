@@ -1,4 +1,4 @@
-# Wingman Architecture
+# Kehlo Architecture
 
 ## Assessment (greenfield repo)
 

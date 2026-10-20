@@ -1,5 +1,5 @@
-name: wingman
-description: Gotchu — late-night dating companion. Stuck on a reply? Gotchu.
+name: kehlo
+description: Kehlo — late-night dating companion. Stuck on a reply? Kehlo.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -42,10 +42,10 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/brand/gotchu_launcher_icon.png
+  image_path: assets/brand/kehlo_launcher_icon.png
   remove_alpha_ios: true
   adaptive_icon_background: "#07050C"
-  adaptive_icon_foreground: assets/brand/gotchu_launcher_icon.png
+  adaptive_icon_foreground: assets/brand/kehlo_launcher_icon.png
 
 flutter:
   uses-material-design: true

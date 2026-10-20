@@ -1,5 +1,5 @@
 /**
- * Shared safety guardrails for Gotchu Edge Functions.
+ * Shared safety guardrails for Kehlo Edge Functions.
  * Keep flirty/friendly adult dating OK; block clear harm.
  */
 
@@ -16,11 +16,11 @@ export const SAFETY_RULES = `Safety & consent (critical — stay natural, never 
 const BLOCK_PATTERNS: Array<{ re: RegExp; reason: string }> = [
   {
     re: /\b(csam|child\s*porn|under[\s-]*(?:1[0-7]|age)|rape\s*her|rape\s*him|drug\s*(?:them|her|him)|roofie|revenge\s*porn)\b/i,
-    reason: "That request isn't something Gotchu can help with.",
+    reason: "That request isn't something Kehlo can help with.",
   },
   {
     re: /\b(how\s+to\s+(stalk|doxx|blackmail)|track\s+(their|her|his)\s+(phone|location)\s+without)\b/i,
-    reason: "That request isn't something Gotchu can help with.",
+    reason: "That request isn't something Kehlo can help with.",
   },
 ];
 
@@ -84,7 +84,7 @@ export async function moderateIfConfigured(
     if (severe) {
       return {
         ok: false,
-        message: "That request isn't something Gotchu can help with.",
+        message: "That request isn't something Kehlo can help with.",
         code: "safety",
       };
     }

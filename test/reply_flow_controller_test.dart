@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:wingman/core/errors/app_exception.dart';
-import 'package:wingman/features/screenshot_reply/controllers/reply_flow_controller.dart';
-import 'package:wingman/features/screenshot_reply/models/generation_prefs.dart';
-import 'package:wingman/features/screenshot_reply/models/reply_flow_state.dart';
-import 'package:wingman/features/screenshot_reply/models/reply_generation_result.dart';
-import 'package:wingman/features/screenshot_reply/models/suggested_replies.dart';
-import 'package:wingman/features/screenshot_reply/services/generate_replies_service.dart';
-import 'package:wingman/features/usage/usage_controller.dart';
+import 'package:kehlo/core/errors/app_exception.dart';
+import 'package:kehlo/features/screenshot_reply/controllers/reply_flow_controller.dart';
+import 'package:kehlo/features/screenshot_reply/models/generation_prefs.dart';
+import 'package:kehlo/features/screenshot_reply/models/reply_flow_state.dart';
+import 'package:kehlo/features/screenshot_reply/models/reply_generation_result.dart';
+import 'package:kehlo/features/screenshot_reply/models/suggested_replies.dart';
+import 'package:kehlo/features/screenshot_reply/services/generate_replies_service.dart';
+import 'package:kehlo/features/usage/usage_controller.dart';
 
 class _FakeService implements GenerateRepliesService {
   ReplyGenerationResult? next;

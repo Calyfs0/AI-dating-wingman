@@ -3,15 +3,16 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../presentation/widgets/gotchu_logo.dart';
+import '../../../presentation/widgets/kehlo_logo.dart';
 import '../../you/controllers/you_preferences_controller.dart';
 import '../models/suggested_replies.dart';
 
-class GotchuBrandHeader extends StatelessWidget {
-  const GotchuBrandHeader({
+class KehloBrandHeader extends StatelessWidget {
+  const KehloBrandHeader({
     super.key,
     this.outcome = 'Upload a chat → get 2 replies you can send.',
   });
@@ -24,7 +25,7 @@ class GotchuBrandHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const GotchuLogo(fontSize: 48),
+        const KehloLogo(fontSize: 48),
         const SizedBox(height: 4),
         Text.rich(
           TextSpan(
@@ -35,7 +36,7 @@ class GotchuBrandHeader extends StatelessWidget {
             children: const [
               TextSpan(text: 'Stuck on a reply? '),
               TextSpan(
-                text: 'Gotchu.',
+                text: 'Kehlo.',
                 style: TextStyle(
                   color: AppColors.neonPink,
                   fontWeight: FontWeight.w700,
@@ -65,7 +66,7 @@ class UploadTrustLine extends StatelessWidget {
   const UploadTrustLine({
     super.key,
     this.text =
-        'Screenshots stay in memory — not stored on your Gotchu account.',
+        'Screenshots stay in memory — not stored on your Kehlo account.',
   });
 
   final String text;
@@ -126,23 +127,36 @@ class MoodChipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final you = context.watch<YouPreferencesController>();
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: _MoodChip(
-            Icons.favorite_rounded,
-            'Natural',
-            selected: you.defaultVibe == ReplyTone.natural,
-            onTap: () => you.setDefaultVibe(ReplyTone.natural),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _MoodChip(
+                Icons.favorite_rounded,
+                'Natural',
+                selected: you.defaultVibe == ReplyTone.natural,
+                onTap: () => you.setDefaultVibe(ReplyTone.natural),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _MoodChip(
+                Icons.local_fire_department_rounded,
+                'Playful',
+                selected: you.defaultVibe == ReplyTone.playful,
+                onTap: () => you.setDefaultVibe(ReplyTone.playful),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _MoodChip(
-            Icons.local_fire_department_rounded,
-            'Playful',
-            selected: you.defaultVibe == ReplyTone.playful,
-            onTap: () => you.setDefaultVibe(ReplyTone.playful),
+        const SizedBox(height: 6),
+        Text(
+          'Sets your default vibe in You.',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            color: const Color(0xFF9A8FA8),
           ),
         ),
       ],

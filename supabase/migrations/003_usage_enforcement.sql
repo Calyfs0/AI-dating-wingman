@@ -21,4 +21,4 @@ create policy "usage_insert_own" on public.usage_events
   for insert with check (auth.uid() = user_id);
 
 comment on column public.profiles.is_pro is
-  'Pro entitlement flag. Sync from RevenueCat webhook when wired; Edge also honors PRO_UNLOCK_ALL env.';
+  'Pro entitlement flag. Set by sync-entitlement (RevenueCat REST + service_role). PRO_UNLOCK_ALL only when KEHLO_ENV=dev (GOTCHU_ENV still accepted).';

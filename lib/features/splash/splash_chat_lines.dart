@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-/// One splash beat: their incoming line + Gotchu’s suggested reply.
+/// One splash beat: their incoming line + Kehlo’s suggested reply.
 class SplashChatPair {
   const SplashChatPair({
     required this.incoming,

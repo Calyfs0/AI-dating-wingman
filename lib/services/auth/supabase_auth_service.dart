@@ -29,7 +29,7 @@ class SupabaseAuthService implements AuthService {
           'Could not create anonymous session.',
         );
       }
-      debugPrint('Wingman: created Supabase anonymous session');
+      debugPrint('Kehlo: created Supabase anonymous session');
     }
     await _ensureProfileRow();
     return currentProfile();

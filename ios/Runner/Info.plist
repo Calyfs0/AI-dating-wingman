@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Gotchu</string>
+	<string>Kehlo</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>gotchu</string>
+	<string>kehlo</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -27,9 +27,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Gotchu uses the camera so you can photograph a chat or dating profile from another phone. Images are analyzed in memory and are not saved to your Gotchu account.</string>
+	<string>Kehlo uses the camera so you can photograph a chat or dating profile from another phone. Images are analyzed in memory and are not saved to your Kehlo account.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Gotchu needs photo access so you can pick a chat or profile screenshot. Screenshots are analyzed briefly and are not stored on your Gotchu account.</string>
+	<string>Kehlo needs photo access so you can pick a chat or profile screenshot. Screenshots are analyzed briefly and are not stored on your Kehlo account.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

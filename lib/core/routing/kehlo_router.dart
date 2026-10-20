@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/companion_shell/companion_shell.dart';
 import '../../features/onboarding/controllers/onboarding_controller.dart';
-import '../../features/onboarding/screens/gotchu_onboarding_screen.dart';
+import '../../features/onboarding/screens/kehlo_onboarding_screen.dart';
 import '../../features/openers/screens/openers_flow_shell.dart';
 import '../../features/people/screens/people_screen.dart';
 import '../../features/practice/screens/practice_screen.dart';
@@ -17,7 +17,7 @@ final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 ///
 /// Primary tabs: Reply · Openers · People · You.
 /// Practice is a secondary full-screen route (entered from You).
-GoRouter createGotchuRouter({
+GoRouter createKehloRouter({
   required OnboardingController onboarding,
 }) {
   return GoRouter(
@@ -35,7 +35,7 @@ GoRouter createGotchuRouter({
     routes: [
       GoRoute(
         path: '/onboarding',
-        builder: (context, state) => const GotchuOnboardingScreen(),
+        builder: (context, state) => const KehloOnboardingScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

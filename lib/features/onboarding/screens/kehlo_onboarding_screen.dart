@@ -4,14 +4,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../presentation/widgets/gotchu_logo.dart';
+import '../../../presentation/widgets/kehlo_logo.dart';
 import '../../screenshot_reply/models/suggested_replies.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../../screenshot_reply/widgets/mockup_components.dart';
 import '../controllers/onboarding_controller.dart';
 
-class GotchuOnboardingScreen extends StatelessWidget {
-  const GotchuOnboardingScreen({super.key});
+class KehloOnboardingScreen extends StatelessWidget {
+  const KehloOnboardingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,20 +26,35 @@ class GotchuOnboardingScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (onboarding.step > 0)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: onboarding.back,
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white,
-                        size: 18,
+                Row(
+                  children: [
+                    if (onboarding.step > 0)
+                      IconButton(
+                        onPressed: onboarding.back,
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 48, height: 48),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () async {
+                        HapticFeedback.selectionClick();
+                        await onboarding.skip();
+                      },
+                      child: Text(
+                        'Skip',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: const Color(0xFFB9AEC8),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  )
-                else
-                  const SizedBox(height: 48),
+                  ],
+                ),
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 280),
@@ -82,10 +97,10 @@ class _PromiseStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const GotchuLogo(fontSize: 56),
+        const KehloLogo(fontSize: 56),
         const SizedBox(height: 20),
         Text(
-          'Stuck on a reply?\nGotchu.',
+          'Stuck on a reply?\nKehlo.',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 32,
             fontWeight: FontWeight.w800,
@@ -281,7 +296,7 @@ class _PrivacyStep extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Screenshots are analyzed in memory and are not stored on your Gotchu account. History you keep stays on this device — clear it anytime in You.',
+          'Screenshots are analyzed in memory and are not stored on your Kehlo account. History you keep stays on this device — clear it anytime in You.',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 15,
             color: const Color(0xFFB9AEC8),

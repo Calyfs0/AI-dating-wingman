@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:wingman/core/theme/app_theme.dart';
-import 'package:wingman/features/history/controllers/history_controller.dart';
-import 'package:wingman/features/people/controllers/people_controller.dart';
-import 'package:wingman/features/screenshot_reply/controllers/reply_flow_controller.dart';
-import 'package:wingman/features/screenshot_reply/models/generation_prefs.dart';
-import 'package:wingman/features/screenshot_reply/models/reply_generation_result.dart';
-import 'package:wingman/features/screenshot_reply/models/suggested_replies.dart';
-import 'package:wingman/features/screenshot_reply/screens/upload_screenshot_screen.dart';
-import 'package:wingman/features/screenshot_reply/services/generate_replies_service.dart';
-import 'package:wingman/features/you/controllers/you_preferences_controller.dart';
+import 'package:kehlo/core/theme/app_theme.dart';
+import 'package:kehlo/features/history/controllers/history_controller.dart';
+import 'package:kehlo/features/people/controllers/people_controller.dart';
+import 'package:kehlo/features/screenshot_reply/controllers/reply_flow_controller.dart';
+import 'package:kehlo/features/screenshot_reply/models/generation_prefs.dart';
+import 'package:kehlo/features/screenshot_reply/models/reply_generation_result.dart';
+import 'package:kehlo/features/screenshot_reply/models/suggested_replies.dart';
+import 'package:kehlo/features/screenshot_reply/screens/upload_screenshot_screen.dart';
+import 'package:kehlo/features/screenshot_reply/services/generate_replies_service.dart';
+import 'package:kehlo/features/you/controllers/you_preferences_controller.dart';
 
 class _FakeService implements GenerateRepliesService {
   @override
@@ -88,7 +88,7 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('Gotchu'), findsWidgets);
+    expect(find.textContaining('Kehlo'), findsWidgets);
     expect(find.text('Upload screenshot'), findsOneWidget);
     expect(find.text('Upload a chat screenshot'), findsOneWidget);
     expect(find.textContaining('not stored'), findsOneWidget);

@@ -36,19 +36,51 @@ export function utcDayStartIso(): string {
   ).toISOString();
 }
 
-async function resolveIsPro(
+/**
+ * Pro if is_pro and (no expiry = subscription, or expiry still in the future).
+ * Expired Boost rows are cleared so later syncs stay accurate.
+ */
+export async function resolveIsPro(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<boolean> {
-  // Temporary unlock for staging / support. TODO: RevenueCat webhook → profiles.is_pro
-  if (Deno.env.get("PRO_UNLOCK_ALL") === "true") return true;
+  // Dev-only unlock. Prefer KEHLO_ENV; GOTCHU_ENV still accepted during rename.
+  const env = (
+    Deno.env.get("KEHLO_ENV") ??
+    Deno.env.get("GOTCHU_ENV") ??
+    ""
+  ).trim().toLowerCase();
+  if (
+    env === "dev" &&
+    Deno.env.get("PRO_UNLOCK_ALL") === "true"
+  ) {
+    return true;
+  }
 
   const { data } = await supabase
     .from("profiles")
-    .select("is_pro")
+    .select("is_pro, pro_expires_at")
     .eq("id", userId)
     .maybeSingle();
-  return data?.is_pro === true;
+
+  if (!data || data.is_pro !== true) return false;
+
+  const expiresRaw = data.pro_expires_at as string | null | undefined;
+  if (expiresRaw == null || expiresRaw === "") {
+    // Subscription / non-expiring Pro.
+    return true;
+  }
+
+  const expires = Date.parse(expiresRaw);
+  if (!Number.isFinite(expires)) return false;
+  if (expires > Date.now()) return true;
+
+  // Boost window ended — clear so client refresh sees free tier.
+  await supabase
+    .from("profiles")
+    .update({ is_pro: false, pro_expires_at: null })
+    .eq("id", userId);
+  return false;
 }
 
 async function countGenerationsToday(
@@ -69,7 +101,7 @@ async function countGenerationsToday(
 function limitMessage(isPro: boolean): string {
   return isPro
     ? "You've hit today's Pro limit. Try again tomorrow."
-    : "You've used today's free replies. Pro unlocks more — join the waitlist in You.";
+    : "You've used today's free replies. Pro unlocks more — upgrade in You.";
 }
 
 /**

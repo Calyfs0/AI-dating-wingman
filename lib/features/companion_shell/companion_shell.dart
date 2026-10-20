@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../openers/controllers/openers_flow_controller.dart';
+import '../people/controllers/people_controller.dart';
 import '../screenshot_reply/controllers/reply_flow_controller.dart';
 
 /// Root shell: Reply · Openers · People · You
@@ -56,6 +57,7 @@ class CompanionNavBar extends StatelessWidget {
         ReplyFlowPhase.generating;
     final openersBusy =
         context.watch<OpenersFlowController>().phase == OpenersPhase.generating;
+    final yourMove = context.watch<PeopleController>().yourMoveCount;
     // Hide nav during core generate so the loading screen owns attention.
     if ((currentIndex == 0 && replyBusy) || (currentIndex == 1 && openersBusy)) {
       return const SizedBox.shrink();
@@ -85,6 +87,7 @@ class CompanionNavBar extends StatelessWidget {
                         icon: _items[i].$1,
                         label: _items[i].$2,
                         selected: currentIndex == i,
+                        badgeCount: i == 2 ? yourMove : 0,
                         onTap: () => onTap(i),
                       ),
                     ),
@@ -104,12 +107,14 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +127,38 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 22, color: color),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(icon, size: 22, color: color),
+                if (badgeCount > 0)
+                  Positioned(
+                    right: -10,
+                    top: -6,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.neonPink,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        badgeCount > 9 ? '9+' : '$badgeCount',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 4),
             Text(
               label,

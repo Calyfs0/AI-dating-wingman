@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../subscription/widgets/usage_limit_callout.dart';
 import '../controllers/reply_flow_controller.dart';
 import '../widgets/desire_backdrop.dart';
 import '../widgets/mockup_components.dart';
@@ -241,28 +242,31 @@ class _TypeMessageScreenState extends State<TypeMessageScreen> {
                     ),
                     if (controller.errorMessage != null) ...[
                       const SizedBox(height: 18),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.danger.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.danger.withValues(alpha: 0.4),
+                      if (isUsageLimitMessage(controller.errorMessage))
+                        UsageLimitCallout(message: controller.errorMessage)
+                      else
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppColors.danger.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Text(
+                            controller.errorMessage!,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              color: Colors.white,
+                              height: 1.4,
+                            ),
                           ),
                         ),
-                        child: Text(
-                          controller.errorMessage!,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 14,
-                            color: Colors.white,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
                     ],
                   ],
                 ),

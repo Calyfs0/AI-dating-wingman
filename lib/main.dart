@@ -10,7 +10,7 @@ import 'core/di/service_locator.dart';
 import 'core/errors/app_exception.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
-import 'features/splash/screens/gotchu_splash_screen.dart';
+import 'features/splash/screens/kehlo_splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,19 +25,19 @@ Future<void> main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const _GotchuBootstrap());
+  runApp(const _KehloBootstrap());
 }
 
 /// Shows the branded splash immediately, boots Supabase in parallel,
 /// then hands off as soon as both splash + boot are done.
-class _GotchuBootstrap extends StatefulWidget {
-  const _GotchuBootstrap();
+class _KehloBootstrap extends StatefulWidget {
+  const _KehloBootstrap();
 
   @override
-  State<_GotchuBootstrap> createState() => _GotchuBootstrapState();
+  State<_KehloBootstrap> createState() => _KehloBootstrapState();
 }
 
-class _GotchuBootstrapState extends State<_GotchuBootstrap> {
+class _KehloBootstrapState extends State<_KehloBootstrap> {
   final Completer<void> _splashDone = Completer<void>();
 
   bool _ready = false;
@@ -74,11 +74,11 @@ class _GotchuBootstrapState extends State<_GotchuBootstrap> {
     if (!mounted) return;
 
     if (error != null) {
-      debugPrint('Gotchu bootstrap failed: $error\n$stack');
+      debugPrint('Kehlo bootstrap failed: $error\n$stack');
       setState(() {
         _errorMessage = error is AppException
             ? error.message
-            : 'Gotchu couldn’t start. Check setup and try again.';
+            : 'Kehlo couldn’t start. Check setup and try again.';
       });
       return;
     }
@@ -88,18 +88,18 @@ class _GotchuBootstrapState extends State<_GotchuBootstrap> {
 
   @override
   Widget build(BuildContext context) {
-    if (_ready) return const GotchuApp();
+    if (_ready) return const KehloApp();
 
     if (_errorMessage != null) {
       return _BootstrapErrorApp(message: _errorMessage!);
     }
 
     return MaterialApp(
-      title: 'Gotchu',
+      title: 'Kehlo',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),
       themeMode: ThemeMode.dark,
-      home: GotchuSplashScreen(onFinished: _onSplashFinished),
+      home: KehloSplashScreen(onFinished: _onSplashFinished),
     );
   }
 }

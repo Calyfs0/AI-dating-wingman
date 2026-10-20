@@ -1,6 +1,6 @@
-# Gotchu
+# Kehlo
 
-Stuck on a reply? Gotchu.
+Stuck on a reply? Kehlo.
 
 Late-night dating companion — turn chat tension into a sendable text.
 

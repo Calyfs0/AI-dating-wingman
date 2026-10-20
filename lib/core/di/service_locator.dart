@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
@@ -13,9 +15,13 @@ import '../../features/profile_audit/controllers/profile_audit_controller.dart';
 import '../../features/profile_audit/services/profile_audit_service.dart';
 import '../../features/screenshot_reply/controllers/reply_flow_controller.dart';
 import '../../features/screenshot_reply/services/generate_replies_service.dart';
+import '../../features/subscription/controllers/subscription_controller.dart';
+import '../../features/subscription/services/entitlement_sync_service.dart';
+import '../../features/subscription/services/revenue_cat_subscription_service.dart';
 import '../../features/usage/usage_controller.dart';
 import '../../features/you/controllers/you_preferences_controller.dart';
 import '../../features/you/services/account_service.dart';
+import '../../services/subscription/subscription_services.dart';
 import '../config/env_config.dart';
 import '../errors/app_exception.dart';
 
@@ -46,10 +52,13 @@ Future<void> configureDependencies() async {
     await _loadControllers();
   }
 
-  debugPrint('Gotchu: DI ready (services + controllers)');
+  debugPrint('Kehlo: DI ready (services + controllers)');
 }
 
 void _registerServices(SupabaseClient client) {
+  final entitlementSync = EntitlementSyncService(client);
+  final subscription = createSubscriptionService(entitlementSync);
+
   getIt
     ..registerSingleton<SupabaseClient>(client)
     ..registerSingleton<GenerateRepliesService>(
@@ -58,7 +67,9 @@ void _registerServices(SupabaseClient client) {
     ..registerSingleton<PracticeService>(PracticeService(client))
     ..registerSingleton<ProfileAuditService>(ProfileAuditService(client))
     ..registerSingleton<PeopleCoachService>(PeopleCoachService(client))
-    ..registerSingleton<AccountService>(AccountService(client));
+    ..registerSingleton<AccountService>(AccountService(client))
+    ..registerSingleton<EntitlementSyncService>(entitlementSync)
+    ..registerSingleton<SubscriptionService>(subscription);
 }
 
 void _registerControllers() {
@@ -117,6 +128,14 @@ void _registerControllers() {
         usage: usage,
       ),
       dispose: (c) => c.dispose(),
+    )
+    ..registerSingleton<SubscriptionController>(
+      SubscriptionController(
+        subscription: getIt<SubscriptionService>(),
+        usage: usage,
+        client: getIt<SupabaseClient>(),
+      ),
+      dispose: (c) => c.dispose(),
     );
 }
 
@@ -128,6 +147,8 @@ Future<void> _loadControllers() async {
     getIt<PeopleController>().load(),
     getIt<OnboardingController>().load(),
   ]);
+  // Identity + offerings after session exists (non-blocking for first paint).
+  unawaited(getIt<SubscriptionController>().configureIdentity());
 }
 
 /// Dispose session controllers only (keeps Supabase + services for process lifetime).
@@ -141,6 +162,7 @@ Future<void> disposeSessionControllers() async {
   await drop<OpenersFlowController>();
   await drop<PracticeController>();
   await drop<ProfileAuditController>();
+  await drop<SubscriptionController>();
   await drop<OnboardingController>();
   await drop<PeopleController>();
   await drop<UsageController>();
@@ -154,5 +176,5 @@ Future<void> _ensureAnonymousSession(SupabaseClient client) async {
   if (response.user == null) {
     throw const AuthException('Could not start a private session.');
   }
-  debugPrint('Gotchu: anonymous session ready');
+  debugPrint('Kehlo: anonymous session ready');
 }

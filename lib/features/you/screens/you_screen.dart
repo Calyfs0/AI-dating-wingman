@@ -8,12 +8,14 @@ import 'package:provider/provider.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../presentation/widgets/gotchu_logo.dart';
+import '../../../presentation/widgets/kehlo_logo.dart';
 import '../../history/controllers/history_controller.dart';
 import '../../history/widgets/history_sheet.dart';
 import '../../onboarding/controllers/onboarding_controller.dart';
 import '../../screenshot_reply/models/suggested_replies.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
+import '../../subscription/controllers/subscription_controller.dart';
+import '../../../services/subscription/subscription_services.dart';
 import '../../usage/usage_controller.dart';
 import '../controllers/you_preferences_controller.dart';
 import '../services/account_service.dart';
@@ -73,12 +75,10 @@ class YouScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const GotchuLogo(fontSize: 36),
+                          const KehloLogo(fontSize: 36),
                           const SizedBox(height: 2),
                           Text(
-                            usage.isPro
-                                ? 'Pro · ${usage.remaining} left today'
-                                : 'Free · ${usage.remaining}/${usage.dailyLimit} today',
+                            usage.proStatusLabel,
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               color: const Color(0xFFB9AEC8),
@@ -132,6 +132,40 @@ class YouScreen extends StatelessWidget {
                         alignment: Alignment.centerLeft,
                         child: TextButton(
                           onPressed: () async {
+                            final ok = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                backgroundColor: const Color(0xFF1A1324),
+                                title: Text(
+                                  'Clear history?',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                content: Text(
+                                  'This removes saved replies from this device. It can’t be undone.',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: const Color(0xFFB9AEC8),
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: Text(
+                                      'Clear',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        color: AppColors.danger,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (ok != true || !context.mounted) return;
                             await history.clear();
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -222,6 +256,10 @@ class YouScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 18),
+              if (history.unstucksThisWeek > 0) ...[
+                _WeeklyPulse(count: history.unstucksThisWeek),
+                const SizedBox(height: 18),
+              ],
               const _PrivacyCard(),
               const SizedBox(height: 18),
               _ProCard(),
@@ -230,6 +268,41 @@ class YouScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _WeeklyPulse extends StatelessWidget {
+  const _WeeklyPulse({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return _GlassCard(
+      child: Row(
+        children: [
+          Icon(
+            Icons.auto_awesome_rounded,
+            color: AppColors.neonPink.withValues(alpha: 0.95),
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              count == 1
+                  ? 'You unstuck 1 chat this week.'
+                  : 'You unstuck $count chats this week.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -264,7 +337,7 @@ class _PrivacyCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Chat and profile screenshots stay in memory for analysis only — Gotchu does not save them to your account or photo library. Suggested replies you keep in History stay on this device until you clear them.',
+                  'Chat and profile screenshots stay in memory for analysis only — Kehlo does not save them to your account or photo library. Suggested replies you keep in History stay on this device until you clear them.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     color: const Color(0xFFB9AEC8),
@@ -303,7 +376,7 @@ class _DeleteAccountButtonState extends State<_DeleteAccountButton> {
           ),
         ),
         content: Text(
-          'This removes your Gotchu cloud data (profile, usage, people on the server) and clears prefs on this device. Screenshots were never stored on your account. This can’t be undone.',
+          'This removes your Kehlo cloud data (profile, usage, people on the server) and clears prefs on this device. Screenshots were never stored on your account. This can’t be undone.',
           style: GoogleFonts.plusJakartaSans(
             color: const Color(0xFFB9AEC8),
             height: 1.35,
@@ -543,9 +616,82 @@ class _ToggleRow extends StatelessWidget {
   }
 }
 
-class _ProCard extends StatelessWidget {
+class _ProCard extends StatefulWidget {
+  @override
+  State<_ProCard> createState() => _ProCardState();
+}
+
+class _ProCardState extends State<_ProCard> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SubscriptionController>().refreshOfferings();
+    });
+  }
+
+  Future<void> _buy(
+    SubscriptionController sub,
+    SubscriptionPackage package, {
+    bool boost = false,
+  }) async {
+    final ok = await sub.purchase(package);
+    if (!mounted) return;
+    final usage = context.read<UsageController>();
+    final successCopy = boost
+        ? (usage.isBoostPro
+            ? 'Boost on — Pro for the next hour.'
+            : (sub.lastError ?? 'Boost status updated.'))
+        : (usage.isSubscriptionPro
+            ? 'Welcome to Pro Monthly.'
+            : (sub.lastError ?? 'Pro status updated.'));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok ? successCopy : (sub.lastError ?? 'Purchase didn’t complete.'),
+          style: GoogleFonts.plusJakartaSans(),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _restore(SubscriptionController sub) async {
+    final ok = await sub.restore();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok ? 'Pro restored.' : (sub.lastError ?? 'Nothing to restore.'),
+          style: GoogleFonts.plusJakartaSans(),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final usage = context.watch<UsageController>();
+    final sub = context.watch<SubscriptionController>();
+    final boost = sub.boostPackage ??
+        const SubscriptionPackage(
+          id: 'kehlo_boost_1h',
+          title: 'Kehlo Boost',
+          priceString: '1 hour',
+          period: '1 hour',
+          isBoost: true,
+        );
+    final monthly = sub.subscriptionPackages.isNotEmpty
+        ? sub.subscriptionPackages.first
+        : null;
+    final boostLabel = boost.priceString == '1 hour'
+        ? 'Boost 1 hour'
+        : 'Boost 1 hour · ${boost.priceString}';
+    final monthlyLabel = monthly == null
+        ? 'Pro monthly'
+        : 'Pro monthly · ${monthly.priceString}';
+
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
@@ -574,8 +720,8 @@ class _ProCard extends StatelessWidget {
                   size: 26,
                 ),
                 const SizedBox(width: 10),
-                  Text(
-                  'Gotchu Pro',
+                Text(
+                  'Kehlo Pro',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
@@ -586,51 +732,210 @@ class _ProCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Free plan includes a daily Reply / Openers / Profile audit budget. Practice is free rehearsal and doesn’t use those credits.',
+              _statusCopy(usage),
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 color: const Color(0xFFD4C8DE),
                 height: 1.35,
               ),
             ),
-            const SizedBox(height: 14),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: AppColors.accentGradient,
-                borderRadius: BorderRadius.circular(999),
+            // —— Free: one-tap Boost + Monthly ——
+            if (!usage.isPro) ...[
+              const SizedBox(height: 14),
+              _BuyButton(
+                label: boostLabel,
+                primary: true,
+                enabled: !sub.busy,
+                onTap: () => _buy(sub, boost, boost: true),
               ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(999),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'You’re on the Pro waitlist. Limits stay free until Pro is live.',
-                          style: GoogleFonts.plusJakartaSans(),
-                        ),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
-                  child: SizedBox(
-                    height: 48,
-                    child: Center(
+              const SizedBox(height: 10),
+              if (monthly != null)
+                _BuyButton(
+                  label: monthlyLabel,
+                  primary: false,
+                  enabled: !sub.busy,
+                  onTap: () => _buy(sub, monthly),
+                )
+              else
+                Text(
+                  'Monthly loads from the App Store when ready.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: const Color(0xFF9A8FA8),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: sub.busy ? null : () => _restore(sub),
+                child: Text(
+                  'Restore purchases',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: const Color(0xFFD4C8DE),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+            // —— Timed Boost: show clock; offer Monthly only (no second Boost) ——
+            if (usage.isBoostPro) ...[
+              const SizedBox(height: 10),
+              Text(
+                usage.proStatusLabel,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFFF2C94C),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${usage.remaining} of ${usage.dailyLimit} replies left today.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: const Color(0xFF9A8FA8),
+                  height: 1.35,
+                ),
+              ),
+              if (monthly != null) ...[
+                const SizedBox(height: 14),
+                _BuyButton(
+                  label: monthlyLabel,
+                  primary: true,
+                  enabled: !sub.busy,
+                  onTap: () => _buy(sub, monthly),
+                ),
+              ],
+            ],
+            // —— Monthly Pro: status only, no buy CTAs ——
+            if (usage.isSubscriptionPro) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      color: Color(0xFF6FCF97),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
                       child: Text(
-                        'Join the Pro waitlist',
+                        'Pro Monthly · ${usage.remaining} replies left today',
                         style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: sub.busy ? null : () => _restore(sub),
+                child: Text(
+                  'Restore on another device',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: const Color(0xFFD4C8DE),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+            if (sub.lastError != null &&
+                sub.lastError!.isNotEmpty &&
+                !sub.busy) ...[
+              const SizedBox(height: 10),
+              Text(
+                sub.lastError!,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: AppColors.danger,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _statusCopy(UsageController usage) {
+    if (usage.isBoostPro) {
+      return 'Boost is on. Keep Monthly handy if you want Pro without watching the clock.';
+    }
+    if (usage.isSubscriptionPro) {
+      return 'You’re on Pro Monthly. Higher daily budget. Practice stays free.';
+    }
+    if (usage.isPro) {
+      return 'Pro is active. Higher daily budget. Practice stays free.';
+    }
+    return 'Need more replies? One tap buys Boost or Monthly — no extra screens.';
+  }
+}
+
+class _BuyButton extends StatelessWidget {
+  const _BuyButton({
+    required this.label,
+    required this.primary,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool primary;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (primary) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: AppColors.accentGradient,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: enabled ? onTap : null,
+            child: SizedBox(
+              height: 48,
+              child: Center(
+                child: Text(
+                  label,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
                   ),
                 ),
               ),
             ),
-          ],
+          ),
         ),
+      );
+    }
+
+    return OutlinedButton(
+      onPressed: enabled ? onTap : null,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.white,
+        side: BorderSide(color: AppColors.neonPink.withValues(alpha: 0.45)),
+        minimumSize: const Size(0, 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
       ),
     );
   }

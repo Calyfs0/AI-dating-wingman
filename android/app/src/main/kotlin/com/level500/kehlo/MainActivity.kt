@@ -1,4 +1,4 @@
-package com.wingman.wingman
+package com.level500.kehlo
 
 import android.media.AudioManager
 import io.flutter.embedding.android.FlutterActivity
@@ -10,7 +10,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            "gotchu/sfx",
+            "kehlo/sfx",
         ).setMethodCallHandler { call, result ->
             if (call.method == "keyClick") {
                 val am = getSystemService(AUDIO_SERVICE) as AudioManager

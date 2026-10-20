@@ -7,11 +7,14 @@ import '../../screenshot_reply/models/suggested_replies.dart';
 class YouPreferencesController extends ChangeNotifier {
   YouPreferencesController();
 
-  static const _vibeKey = 'gotchu_default_vibe';
-  static const _casualKey = 'gotchu_keep_casual';
-  static const _matchLangKey = 'gotchu_match_language';
+  static const _vibeKey = 'kehlo_default_vibe';
+  static const _casualKey = 'kehlo_keep_casual';
+  static const _matchLangKey = 'kehlo_match_language';
 
-  // Legacy Wingman keys — migrated once on load.
+  // Legacy keys — migrated once on load.
+  static const _gotchuVibeKey = 'gotchu_default_vibe';
+  static const _gotchuCasualKey = 'gotchu_keep_casual';
+  static const _gotchuMatchLangKey = 'gotchu_match_language';
   static const _legacyVibeKey = 'wingman_default_vibe';
   static const _legacyCasualKey = 'wingman_keep_casual';
   static const _legacyMatchLangKey = 'wingman_match_language';
@@ -29,31 +32,45 @@ class YouPreferencesController extends ChangeNotifier {
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final vibeName =
-        prefs.getString(_vibeKey) ?? prefs.getString(_legacyVibeKey);
+    final vibeName = prefs.getString(_vibeKey) ??
+        prefs.getString(_gotchuVibeKey) ??
+        prefs.getString(_legacyVibeKey);
     defaultVibe = ReplyTone.values.firstWhere(
       (t) => t.name == vibeName,
       orElse: () => ReplyTone.natural,
     );
     keepCasual = prefs.getBool(_casualKey) ??
+        prefs.getBool(_gotchuCasualKey) ??
         prefs.getBool(_legacyCasualKey) ??
         true;
     matchLanguage = prefs.getBool(_matchLangKey) ??
+        prefs.getBool(_gotchuMatchLangKey) ??
         prefs.getBool(_legacyMatchLangKey) ??
         true;
     loaded = true;
     notifyListeners();
 
     // Migrate legacy keys when present.
-    if (prefs.containsKey(_legacyVibeKey) ||
+    final migrating = prefs.containsKey(_gotchuVibeKey) ||
+        prefs.containsKey(_gotchuCasualKey) ||
+        prefs.containsKey(_gotchuMatchLangKey) ||
+        prefs.containsKey(_legacyVibeKey) ||
         prefs.containsKey(_legacyCasualKey) ||
-        prefs.containsKey(_legacyMatchLangKey)) {
+        prefs.containsKey(_legacyMatchLangKey);
+    if (migrating) {
       await prefs.setString(_vibeKey, defaultVibe.name);
       await prefs.setBool(_casualKey, keepCasual);
       await prefs.setBool(_matchLangKey, matchLanguage);
-      await prefs.remove(_legacyVibeKey);
-      await prefs.remove(_legacyCasualKey);
-      await prefs.remove(_legacyMatchLangKey);
+      for (final k in [
+        _gotchuVibeKey,
+        _gotchuCasualKey,
+        _gotchuMatchLangKey,
+        _legacyVibeKey,
+        _legacyCasualKey,
+        _legacyMatchLangKey,
+      ]) {
+        await prefs.remove(k);
+      }
     }
   }
 

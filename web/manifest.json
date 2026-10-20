@@ -1,11 +1,11 @@
 {
-    "name": "Gotchu",
-    "short_name": "Gotchu",
+    "name": "Kehlo",
+    "short_name": "Kehlo",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#07050C",
     "theme_color": "#FF4EAB",
-    "description": "Stuck on a reply? Gotchu.",
+    "description": "Stuck on a reply? Kehlo.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

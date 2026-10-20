@@ -1,4 +1,4 @@
-# Minimal Supabase config for Wingman Edge Functions.
+# Minimal Supabase config for Kehlo Edge Functions.
 # Link with: npx supabase link --project-ref YOUR_REF
 
 [functions.analyze-conversation]

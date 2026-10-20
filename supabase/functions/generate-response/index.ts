@@ -8,7 +8,7 @@ STRICT RULES:
 - If messages are empty, return text explaining you need a chat screenshot (do not invent a chat).
 - Sound like a real person texting: short, natural, 1–2 sentences.
 - Reference something concrete that appears in the provided messages.
-- Never cheesy pickup lines. Never mention Wingman or AI.
+- Never cheesy pickup lines. Never mention Kehlo or AI.
 Return JSON only: {"text": string, "alternatives": string[2], "why_it_works": string, "send_worthiness": number 0-10}.`;
 
 function messagesOnly(structured: Record<string, unknown>): unknown[] {
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
 
     const priorText = String(body.priorText ?? "");
     const messagesBlob = JSON.stringify(messages);
-    const system = `You are Wingman. ${QUALITY_RULES}`;
+    const system = `You are Kehlo. ${QUALITY_RULES}`;
     let userPrompt = "";
 
     if (mode === "humanize") {

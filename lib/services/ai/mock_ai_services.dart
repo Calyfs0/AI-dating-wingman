@@ -9,7 +9,7 @@ import 'ai_services.dart';
 
 const _uuid = Uuid();
 
-/// Demo AI layer with realistic Wingman copy. Swap for edge-function clients later.
+/// Demo AI layer with realistic Kehlo copy. Swap for edge-function clients later.
 class MockConversationAnalysisService implements ConversationAnalysisService {
   @override
   Stream<ProcessingStage> analyzeProgress({
@@ -292,7 +292,7 @@ class MockCoachingService implements CoachingService {
     return const [
       AIInsight(
         id: '1',
-        title: 'Your wingman noticed something',
+        title: 'Kehlo noticed something',
         body:
             'You tend to ask multiple questions in a row.\nTry mixing questions with playful statements.',
       ),

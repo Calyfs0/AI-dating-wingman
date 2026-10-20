@@ -15,7 +15,7 @@ _flutter.loader.load({
         el.style.letterSpacing = 'normal';
         el.style.textTransform = 'none';
         el.style.padding = '24px';
-        el.textContent = 'Failed to load Gotchu:\n' + err;
+        el.textContent = 'Failed to load Kehlo:\n' + err;
       }
     }
   },

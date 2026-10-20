@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../presentation/widgets/gotchu_logo.dart';
+import '../../../presentation/widgets/kehlo_logo.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../splash_chat_lines.dart';
 import '../splash_sfx.dart';
@@ -12,19 +12,19 @@ import '../splash_sfx.dart';
 /// Splash story:
 /// 1) their message types in
 /// 2) your bubble waits
-/// 3) Gotchu + suggested reply slide up and land in your bubble
-/// 4) Gotchu pushes the chat up / away — only Gotchu remains
-class GotchuSplashScreen extends StatefulWidget {
-  const GotchuSplashScreen({super.key, this.onFinished});
+/// 3) Kehlo + suggested reply slide up and land in your bubble
+/// 4) Kehlo pushes the chat up / away — only Kehlo remains
+class KehloSplashScreen extends StatefulWidget {
+  const KehloSplashScreen({super.key, this.onFinished});
 
   /// Called once the splash beat finishes (so bootstrap can leave promptly).
   final VoidCallback? onFinished;
 
   @override
-  State<GotchuSplashScreen> createState() => _GotchuSplashScreenState();
+  State<KehloSplashScreen> createState() => _KehloSplashScreenState();
 }
 
-class _GotchuSplashScreenState extends State<GotchuSplashScreen>
+class _KehloSplashScreenState extends State<KehloSplashScreen>
     with SingleTickerProviderStateMixin {
   /// Post-type stages (bubble → suggest → grow → brief hold).
   static const _afterTypingMs = 4200;
@@ -135,7 +135,7 @@ class _GotchuSplashScreenState extends State<GotchuSplashScreen>
       _phase(ms, _youBubbleAt.toDouble(), _youBubbleAt + 280.0),
     );
 
-    // Suggestion rises; same Gotchu grows from small → hero.
+    // Suggestion rises; same Kehlo grows from small → hero.
     final rise = Curves.easeOutCubic.transform(
       _phase(ms, _suggestStart.toDouble(), _suggestLanded.toDouble()),
     );
@@ -150,9 +150,9 @@ class _GotchuSplashScreenState extends State<GotchuSplashScreen>
     final chatSlideUp = -push * (size.height * 0.42);
     final chatFade = (1.0 - push).clamp(0.0, 1.0);
 
-    // One Gotchu: rise from below (small) → land near bubble → grow to center.
-    final gotchuOpacity = rise.clamp(0.0, 1.0);
-    final gotchuAlignment = Alignment.lerp(
+    // One Kehlo: rise from below (small) → land near bubble → grow to center.
+    final kehloOpacity = rise.clamp(0.0, 1.0);
+    final kehloAlignment = Alignment.lerp(
       const Alignment(0.55, 0.85), // below
       Alignment.lerp(
         const Alignment(0.55, 0.22), // beside your bubble
@@ -162,7 +162,7 @@ class _GotchuSplashScreenState extends State<GotchuSplashScreen>
       rise,
     )!;
     // Ends large on screen — mini ~0.55 → hero ~1.35 on a big script size.
-    final gotchuScale = 0.55 + rise * 0.05 + grow * 0.75;
+    final kehloScale = 0.55 + rise * 0.05 + grow * 0.75;
     final logoFontSize = 36.0 + grow * 40.0;
 
     return Scaffold(
@@ -260,18 +260,32 @@ class _GotchuSplashScreenState extends State<GotchuSplashScreen>
                 ),
               ),
 
-              // Same Gotchu mark — rises with the suggestion, then grows.
-              if (gotchuOpacity > 0.01)
+              // Same Kehlo mark — rises with the suggestion, then grows.
+              if (kehloOpacity > 0.01)
                 Opacity(
-                  opacity: gotchuOpacity,
+                  opacity: kehloOpacity,
                   child: Align(
-                    alignment: gotchuAlignment,
+                    alignment: kehloAlignment,
                     child: Transform.scale(
-                      scale: gotchuScale,
-                      child: GotchuLogo(fontSize: logoFontSize),
+                      scale: kehloScale,
+                      child: KehloLogo(fontSize: logoFontSize),
                     ),
                   ),
                 ),
+              Positioned(
+                top: 4,
+                right: 8,
+                child: TextButton(
+                  onPressed: _notifyFinished,
+                  child: Text(
+                    'Skip',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: const Color(0xFFB9AEC8),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../people/widgets/your_move_banner.dart';
+import '../../subscription/widgets/usage_limit_callout.dart';
 import '../controllers/reply_flow_controller.dart';
 import '../widgets/desire_backdrop.dart';
 import '../widgets/mockup_components.dart';
@@ -66,8 +68,17 @@ class _UploadScreenshotScreenState extends State<UploadScreenshotScreen> {
                     : ListView(
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                         children: [
-                          const GotchuBrandHeader(),
-                          const SizedBox(height: 18),
+                          const KehloBrandHeader(),
+                          const SizedBox(height: 14),
+                          const YourMoveBanner(),
+                          if (controller.attachedPerson != null) ...[
+                            _AttachedPersonChip(
+                              name: controller.attachedPerson!.name,
+                              onClear: () =>
+                                  controller.setAttachedPerson(null),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           DashedUploadZone(
                             onTap: controller.isBusy
                                 ? null
@@ -102,17 +113,22 @@ class _UploadScreenshotScreenState extends State<UploadScreenshotScreen> {
                           const MoodChipRow(),
                           if (controller.errorMessage != null) ...[
                             const SizedBox(height: 14),
-                            GlassCard(
-                              borderColor:
-                                  AppColors.danger.withValues(alpha: 0.45),
-                              child: Text(
-                                controller.errorMessage!,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(color: Colors.white),
+                            if (isUsageLimitMessage(controller.errorMessage))
+                              UsageLimitCallout(
+                                message: controller.errorMessage,
+                              )
+                            else
+                              GlassCard(
+                                borderColor:
+                                    AppColors.danger.withValues(alpha: 0.45),
+                                child: Text(
+                                  controller.errorMessage!,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(color: Colors.white),
+                                ),
                               ),
-                            ),
                           ],
                         ],
                       ),
@@ -205,15 +221,18 @@ class _SelectedChatLayout extends StatelessWidget {
           ),
           if (errorMessage != null) ...[
             const SizedBox(height: 10),
-            GlassCard(
-              borderColor: AppColors.danger.withValues(alpha: 0.45),
-              child: Text(
-                errorMessage!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white,
-                    ),
+            if (isUsageLimitMessage(errorMessage))
+              UsageLimitCallout(message: errorMessage)
+            else
+              GlassCard(
+                borderColor: AppColors.danger.withValues(alpha: 0.45),
+                child: Text(
+                  errorMessage!,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white,
+                      ),
+                ),
               ),
-            ),
           ],
           const SizedBox(height: 8),
         ],
@@ -267,6 +286,64 @@ class _SelectedShot extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AttachedPersonChip extends StatelessWidget {
+  const _AttachedPersonChip({
+    required this.name,
+    required this.onClear,
+  });
+
+  final String name;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: AppColors.neonPink.withValues(alpha: 0.12),
+          border: Border.all(
+            color: AppColors.neonPink.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.person_rounded,
+                size: 16,
+                color: AppColors.neonPink,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Replying for $name',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Clear',
+                onPressed: onClear,
+                icon: const Icon(
+                  Icons.close_rounded,
+                  size: 16,
+                  color: Color(0xFFB9AEC8),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

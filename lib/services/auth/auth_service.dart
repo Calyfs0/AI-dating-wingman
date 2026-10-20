@@ -58,7 +58,7 @@ class LocalAuthService implements AuthService {
           ).toJson(),
         ),
       );
-      debugPrint('Wingman: created anonymous session');
+      debugPrint('Kehlo: created anonymous session');
     }
     return currentProfile();
   }

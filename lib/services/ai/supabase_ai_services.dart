@@ -245,7 +245,7 @@ Map<String, dynamic> _requireMap(FunctionResponse response) {
   final data = response.data;
   if (data is Map<String, dynamic>) return data;
   if (data is Map) return Map<String, dynamic>.from(data);
-  throw const UnknownAppException('Unexpected response from Wingman servers.');
+  throw const UnknownAppException('Unexpected response from Kehlo servers.');
 }
 
 AppException _mapFunctionError(Map<String, dynamic> data) {

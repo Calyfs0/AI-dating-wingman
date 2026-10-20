@@ -2,10 +2,13 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../openers/controllers/openers_flow_controller.dart';
+import '../../screenshot_reply/controllers/reply_flow_controller.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../controllers/people_controller.dart';
 import '../models/person.dart';
@@ -44,7 +47,9 @@ class PeopleScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Light reminders — name + status, on this device only.',
+                          controller.yourMoveCount > 0
+                              ? '${controller.yourMoveCount} your move — open someone → Get a reply.'
+                              : 'Track whose turn it is. After you send, mark Waiting.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             color: const Color(0xFFB9AEC8),
@@ -199,13 +204,51 @@ class PeopleScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Just for you — not shared with Reply or Openers unless you attach them.',
+                            isEdit
+                                ? 'Get a reply for them, or edit details below.'
+                                : 'Add them so Kehlo can nudge you when it’s your move.',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               color: const Color(0xFF9A8FA8),
                               height: 1.35,
                             ),
                           ),
+                          if (isEdit) ...[
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _ActionChipButton(
+                                    label: 'Get a reply',
+                                    primary: true,
+                                    onTap: () {
+                                      HapticFeedback.lightImpact();
+                                      context
+                                          .read<ReplyFlowController>()
+                                          .setAttachedPerson(person);
+                                      Navigator.pop(ctx);
+                                      context.go('/reply');
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _ActionChipButton(
+                                    label: 'First message',
+                                    primary: false,
+                                    onTap: () {
+                                      HapticFeedback.lightImpact();
+                                      context
+                                          .read<OpenersFlowController>()
+                                          .setAttachedPerson(person);
+                                      Navigator.pop(ctx);
+                                      context.go('/openers');
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           _Field(
                             controller: nameCtrl,
@@ -267,7 +310,19 @@ class PeopleScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(999),
                                 onTap: () async {
                                   final name = nameCtrl.text.trim();
-                                  if (name.isEmpty) return;
+                                  if (name.isEmpty) {
+                                    HapticFeedback.heavyImpact();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Add a name first.',
+                                          style: GoogleFonts.plusJakartaSans(),
+                                        ),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                    return;
+                                  }
                                   HapticFeedback.lightImpact();
                                   final people =
                                       context.read<PeopleController>();
@@ -355,6 +410,68 @@ class PeopleScreen extends StatelessWidget {
   }
 }
 
+class _ActionChipButton extends StatelessWidget {
+  const _ActionChipButton({
+    required this.label,
+    required this.primary,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool primary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (primary) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: AppColors.accentGradient,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: SizedBox(
+              height: 44,
+              child: Center(
+                child: Text(
+                  label,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.white,
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.28)),
+        minimumSize: const Size(0, 44),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.plusJakartaSans(
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+        ),
+      ),
+    );
+  }
+}
+
 class _EmptyPeople extends StatelessWidget {
   const _EmptyPeople({required this.onAdd});
 
@@ -375,7 +492,7 @@ class _EmptyPeople extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              'Nobody here yet',
+              'Add who you’re texting',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -384,7 +501,7 @@ class _EmptyPeople extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Add a name when it helps you remember whose turn it is. Totally optional — Reply works without it.',
+              'Kehlo will nudge you when it’s your move. Reply still works without this — it’s how you come back.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 color: const Color(0xFFB9AEC8),

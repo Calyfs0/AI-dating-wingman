@@ -1,4 +1,4 @@
-# Gotchu setup — Dating companion
+# Kehlo setup — Dating companion
 
 Tabs: **Reply** · **Openers** · **People** · **You**
 
@@ -38,8 +38,8 @@ flutter run
 
 ## Manual test
 
-1. App opens on **Reply** as **Gotchu** with bottom tabs.
+1. App opens on **Reply** as **Kehlo** with bottom tabs.
 2. **Reply**: screenshot or type message → two reply cards (Natural / Playful).
 3. **Openers**: profile screenshot → two first-message cards.
 4. **People**: add someone with status; long-press to remove.
-5. **You**: vibe prefs + Gotchu Pro card.
+5. **You**: vibe prefs + Kehlo Pro card.

@@ -42,7 +42,8 @@ class GenerationException extends AppException {
 
 class UsageLimitException extends AppException {
   const UsageLimitException([
-    super.message = 'You\'ve reached your free limit. Go Pro to continue.',
+    super.message =
+        'You\'ve used today\'s free replies. Pro unlocks more — upgrade anytime.',
   ]) : super(code: 'usage_limit');
 }
 

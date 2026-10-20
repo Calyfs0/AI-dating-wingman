@@ -253,7 +253,7 @@ class WingmanMockNotificationCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'WINGMAN',
+                      'KEHLO',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: AppColors.textPrimary,
                             letterSpacing: 0.6,

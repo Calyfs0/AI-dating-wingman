@@ -15,7 +15,7 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
 
     let channel = FlutterMethodChannel(
-      name: "gotchu/sfx",
+      name: "kehlo/sfx",
       binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
     channel.setMethodCallHandler { call, result in

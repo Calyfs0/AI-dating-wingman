@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 class SplashSfx {
   SplashSfx();
 
-  static const _channel = MethodChannel('gotchu/sfx');
+  static const _channel = MethodChannel('kehlo/sfx');
 
   AudioPlayer? _swish;
   AudioPlayer? _pop;

@@ -1,7 +1,15 @@
 abstract final class AppConstants {
-  static const String appName = 'Gotchu';
-  static const String tagline = 'Stuck on a reply? Gotchu.';
+  static const String appName = 'Kehlo';
+  static const String tagline = 'Stuck on a reply? Kehlo.';
   static const String entitlementPro = 'pro';
+
+  /// App Store / RC auto-renewable monthly.
+  static const String monthlyProductId = 'kehlo_pro_monthly';
+
+  /// App Store / RC consumable — 1 hour of Pro.
+  static const String boostProductId = 'kehlo_boost_1h';
+  static const int boostDurationHours = 1;
+
   static const int maxScreenshots = 10;
   static const int maxScreenshotBytes = 8 * 1024 * 1024;
   static const Duration aiTimeout = Duration(seconds: 45);

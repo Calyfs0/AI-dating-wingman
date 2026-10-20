@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../subscription/widgets/sent_it_sheet.dart';
+import '../../subscription/widgets/usage_limit_callout.dart';
 import '../controllers/reply_flow_controller.dart';
 import '../models/suggested_replies.dart';
 import '../widgets/desire_backdrop.dart';
@@ -111,6 +113,10 @@ class _SuggestedRepliesScreenState extends State<SuggestedRepliesScreen> {
     final streaming = controller.isStreaming;
     final selectedTone = controller.preferredVibe;
     final message = replies.forTone(selectedTone);
+    final copyReady = !streaming &&
+        !regenerating &&
+        message.trim().length >= 8 &&
+        message.trim() != '…';
     final why = _whyText(replies);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
@@ -196,7 +202,21 @@ class _SuggestedRepliesScreenState extends State<SuggestedRepliesScreen> {
                                 tone: selectedTone,
                                 message: message,
                                 copied: controller.copiedConfirmation,
-                                onCopy: () => controller.copyReply(message),
+                                onCopy: copyReady
+                                    ? () async {
+                                        final ok = await controller
+                                            .copyReply(message);
+                                        if (!context.mounted || !ok) {
+                                          return;
+                                        }
+                                        await showSentItSheet(
+                                          context,
+                                          attachedPerson:
+                                              controller.attachedPerson,
+                                          copiedText: message,
+                                        );
+                                      }
+                                    : null,
                                 why: why,
                                 whyExpanded: _whyExpanded,
                                 onToggleWhy: why == null
@@ -233,12 +253,17 @@ class _SuggestedRepliesScreenState extends State<SuggestedRepliesScreen> {
                           ],
                           if (controller.errorMessage != null) ...[
                             const SizedBox(height: 10),
-                            Text(
-                              controller.errorMessage!,
-                              style: text.bodyMedium?.copyWith(
-                                color: AppColors.danger,
+                            if (isUsageLimitMessage(controller.errorMessage))
+                              UsageLimitCallout(
+                                message: controller.errorMessage,
+                              )
+                            else
+                              Text(
+                                controller.errorMessage!,
+                                style: text.bodyMedium?.copyWith(
+                                  color: AppColors.danger,
+                                ),
                               ),
-                            ),
                           ],
                         ],
                       ),
@@ -397,7 +422,7 @@ class _HeroReplyCard extends StatelessWidget {
   final ReplyTone tone;
   final String message;
   final bool copied;
-  final VoidCallback onCopy;
+  final VoidCallback? onCopy;
   final String? why;
   final bool whyExpanded;
   final VoidCallback? onToggleWhy;
@@ -493,7 +518,7 @@ class _CopyButton extends StatelessWidget {
 
   final Color accent;
   final bool copied;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {

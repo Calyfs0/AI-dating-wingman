@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../../screenshot_reply/widgets/mockup_components.dart';
 import '../../screenshot_reply/widgets/picked_image_preview.dart';
+import '../../subscription/widgets/usage_limit_callout.dart';
 import '../controllers/openers_flow_controller.dart';
 import '../widgets/openers_source_sheet.dart';
 
@@ -74,12 +75,15 @@ class OpenersUploadScreen extends StatelessWidget {
                             ),
                             if (c.errorMessage != null) ...[
                               const SizedBox(height: 10),
-                              Text(
-                                c.errorMessage!,
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: AppColors.danger,
+                              if (isUsageLimitMessage(c.errorMessage))
+                                UsageLimitCallout(message: c.errorMessage)
+                              else
+                                Text(
+                                  c.errorMessage!,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: AppColors.danger,
+                                  ),
                                 ),
-                              ),
                             ],
                             const SizedBox(height: 8),
                           ],
@@ -107,6 +111,57 @@ class OpenersUploadScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 18),
+                          if (c.attachedPerson != null) ...[
+                            Material(
+                              color: Colors.transparent,
+                              child: Ink(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: AppColors.neonPink
+                                      .withValues(alpha: 0.12),
+                                  border: Border.all(
+                                    color: AppColors.neonPink
+                                        .withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(12, 8, 4, 8),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.person_rounded,
+                                        size: 16,
+                                        color: AppColors.neonPink,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Opening for ${c.attachedPerson!.name}',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Clear',
+                                        onPressed: () =>
+                                            c.setAttachedPerson(null),
+                                        icon: const Icon(
+                                          Icons.close_rounded,
+                                          size: 16,
+                                          color: Color(0xFFB9AEC8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           DashedUploadZone(
                             onTap: c.isBusy ? null : c.chooseFromPhotos,
                             onCameraTap: c.isBusy ? null : c.capturePhoto,
@@ -142,12 +197,15 @@ class OpenersUploadScreen extends StatelessWidget {
                           const MoodChipRow(),
                           if (c.errorMessage != null) ...[
                             const SizedBox(height: 14),
-                            Text(
-                              c.errorMessage!,
-                              style: GoogleFonts.plusJakartaSans(
-                                color: AppColors.danger,
+                            if (isUsageLimitMessage(c.errorMessage))
+                              UsageLimitCallout(message: c.errorMessage)
+                            else
+                              Text(
+                                c.errorMessage!,
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: AppColors.danger,
+                                ),
                               ),
-                            ),
                           ],
                         ],
                       ),

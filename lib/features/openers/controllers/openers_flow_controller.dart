@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -44,6 +46,7 @@ class OpenersFlowController extends ChangeNotifier {
 
   int _generationToken = 0;
   GenerationCancelToken? _cancelToken;
+  bool _softConsumed = false;
 
   OpenersFlowState get state => _state;
   OpenersPhase get phase => _state.phase;
@@ -126,7 +129,7 @@ class OpenersFlowController extends ChangeNotifier {
         OpenersUploadState(
           selectedImage: selectedImage,
           errorMessage:
-              'Photo or camera access is needed for profile screenshots. Allow access for Gotchu in Settings, then try again.',
+              'Photo or camera access is needed for profile screenshots. Allow access for Kehlo in Settings, then try again.',
         ),
       );
     } catch (e) {
@@ -149,7 +152,9 @@ class OpenersFlowController extends ChangeNotifier {
     _generationToken++;
     _cancelToken?.cancel();
     _cancelToken = null;
+    _refundSoftConsumeIfNeeded();
     selectedImage = null;
+    attachedPerson = null;
     copiedConfirmation = false;
     _seedSessionVibeFromYou();
     _setState(const OpenersUploadState());
@@ -168,7 +173,18 @@ class OpenersFlowController extends ChangeNotifier {
     _cancelToken?.cancel();
     _cancelToken = null;
     _generationToken++;
+    _refundSoftConsumeIfNeeded();
     _setState(OpenersUploadState(selectedImage: selectedImage));
+  }
+
+  void _refundSoftConsumeIfNeeded() {
+    if (!_softConsumed) return;
+    _softConsumed = false;
+    unawaited(_usage?.refundConsume());
+  }
+
+  void _clearSoftConsume() {
+    _softConsumed = false;
   }
 
   Future<void> generate() async {
@@ -193,6 +209,7 @@ class OpenersFlowController extends ChangeNotifier {
       );
       return;
     }
+    _softConsumed = usage != null;
 
     final token = ++_generationToken;
     _cancelToken?.cancel();
@@ -271,6 +288,7 @@ class OpenersFlowController extends ChangeNotifier {
   }
 
   Future<void> _applyOutcome(ReplyGenerationResult result) async {
+    _clearSoftConsume();
     await _usage?.refreshFromServer();
     switch (result) {
       case RepliesReady(:final replies):
@@ -294,8 +312,12 @@ class OpenersFlowController extends ChangeNotifier {
   }
 
   Future<void> _applyFailure(Object e) async {
-    if (e is AppException && e.message == 'Cancelled.') return;
+    if (e is AppException && e.message == 'Cancelled.') {
+      _refundSoftConsumeIfNeeded();
+      return;
+    }
 
+    _clearSoftConsume();
     AppException mapped;
     if (e is UsageLimitException) {
       await _usage?.markExhausted();

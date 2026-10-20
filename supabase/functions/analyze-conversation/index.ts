@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       }
       const result = await chatJson({
         system:
-          "You are Wingman, a private dating coach. Return JSON only with keys: interpretation (string), guidance (string). Be concise and practical. Never invent messages they did not send.",
+          "You are Kehlo, a private dating coach. Return JSON only with keys: interpretation (string), guidance (string). Be concise and practical. Never invent messages they did not send.",
         user: `Interpret this message from the other person:\n${message}`,
       });
       return jsonResponse({
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
       }
       const result = await chatJson({
         system:
-          "You are Wingman, a private dating coach. Return JSON only with keys: verdict (string), why (string), better (string), send_worthiness (number 0-10). Improve drafts without being cheesy.",
+          "You are Kehlo, a private dating coach. Return JSON only with keys: verdict (string), why (string), better (string), send_worthiness (number 0-10). Improve drafts without being cheesy.",
         user: `Review this draft before send:\n${draft}`,
       });
       return jsonResponse({
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const system = `You are Wingman, a premium private AI dating coach.
+    const system = `You are Kehlo, a premium private AI dating coach.
 You receive dating-app chat screenshots and/or pasted text from the USER's phone.
 
 CRITICAL — chat detection:

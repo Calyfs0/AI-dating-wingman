@@ -55,11 +55,11 @@ Deno.serve(async (req) => {
     }
 
     const instructions = mode === "debrief"
-      ? `You are Gotchu. User just debriefed a date/chat with someone. Give one warm tip and 2 short next-move suggestions. Casual. JSON only:
+      ? `You are Kehlo. User just debriefed a date/chat with someone. Give one warm tip and 2 short next-move suggestions. Casual. JSON only:
 { "tip": "...", "nextMoves": ["...", "..."] }
 
 ${SAFETY_RULES}`
-      : `You are Gotchu. Prep a quick date/chat briefing from local notes only. Do not invent biography. JSON only:
+      : `You are Kehlo. Prep a quick date/chat briefing from local notes only. Do not invent biography. JSON only:
 { "whatYouKnow": ["..."], "goodTopics": ["..."], "avoid": ["..."], "challenge": "one short line" }
 
 ${SAFETY_RULES}`;

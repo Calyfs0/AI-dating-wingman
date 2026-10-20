@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -50,6 +52,8 @@ class ReplyFlowController extends ChangeNotifier {
 
   int _generationToken = 0;
   GenerationCancelToken? _cancelToken;
+  /// Soft local credit reserved for the in-flight generate (refunded on cancel).
+  bool _softConsumed = false;
 
   // ---- Compatibility getters (screens keep light updates) ----
 
@@ -175,8 +179,8 @@ class ReplyFlowController extends ChangeNotifier {
         ReplyUploadState(
           selectedImage: selectedImage,
           errorMessage: fromCamera
-              ? 'Camera access is needed to photograph a chat. Allow Camera for Gotchu in Settings, then try again.'
-              : 'Photo access is needed to pick a screenshot. Allow Photos for Gotchu in Settings, then try again.',
+              ? 'Camera access is needed to photograph a chat. Allow Camera for Kehlo in Settings, then try again.'
+              : 'Photo access is needed to pick a screenshot. Allow Photos for Kehlo in Settings, then try again.',
         ),
       );
     } catch (e) {
@@ -217,8 +221,10 @@ class ReplyFlowController extends ChangeNotifier {
     _generationToken++;
     _cancelToken?.cancel();
     _cancelToken = null;
+    _refundSoftConsumeIfNeeded();
     _resetChatState(clearImage: true, clearTyped: true, clearReplies: true);
     lastSource = ReplyInputSource.screenshot;
+    attachedPerson = null;
     _seedSessionVibeFromYou();
     _setState(const ReplyUploadState());
   }
@@ -241,7 +247,18 @@ class ReplyFlowController extends ChangeNotifier {
     _cancelToken?.cancel();
     _cancelToken = null;
     _generationToken++;
+    _refundSoftConsumeIfNeeded();
     _returnToInput();
+  }
+
+  void _refundSoftConsumeIfNeeded() {
+    if (!_softConsumed) return;
+    _softConsumed = false;
+    unawaited(_usage?.refundConsume());
+  }
+
+  void _clearSoftConsume() {
+    _softConsumed = false;
   }
 
   void _returnToInput({String? error}) {
@@ -325,6 +342,7 @@ class ReplyFlowController extends ChangeNotifier {
       _returnToInput(error: usage.limitMessage);
       return;
     }
+    _softConsumed = usage != null;
 
     final token = ++_generationToken;
     _cancelToken?.cancel();
@@ -429,6 +447,7 @@ class ReplyFlowController extends ChangeNotifier {
     required ReplyInputSource source,
     String? latestIncomingOverride,
   }) async {
+    _clearSoftConsume();
     await _usage?.refreshFromServer();
     switch (result) {
       case RepliesReady(:final replies):
@@ -466,8 +485,12 @@ class ReplyFlowController extends ChangeNotifier {
     required bool keepPartials,
     SuggestedReplies? restoreReplies,
   }) async {
-    if (e is AppException && e.message == 'Cancelled.') return;
+    if (e is AppException && e.message == 'Cancelled.') {
+      _refundSoftConsumeIfNeeded();
+      return;
+    }
 
+    _clearSoftConsume();
     AppException mapped;
     if (e is UsageLimitException) {
       await _usage?.markExhausted();

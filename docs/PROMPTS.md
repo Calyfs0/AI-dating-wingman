@@ -1,4 +1,4 @@
-# Gotchu Edge Function prompts
+# Kehlo Edge Function prompts
 
 Server-side only. OpenAI keys never ship in the Flutter client.  
 Shared safety copy lives in `supabase/functions/_shared/safety.ts` (`SAFETY_RULES`).
@@ -62,7 +62,7 @@ When `stream: true`, SSE `partial` then `done` (or `error`). Same prompts; one n
 
 ## `profile-audit`
 
-- Role: Gotchu Profile — score photo/bio vibes, rewrite bio variants, extract opener hook.
+- Role: Kehlo Profile — score photo/bio vibes, rewrite bio variants, extract opener hook.
 - No mean insults; never invent invisible hobbies/photos.
 - Includes `SAFETY_RULES` (respectful critique only).
 
@@ -77,9 +77,9 @@ When `stream: true`, SSE `partial` then `done` (or `error`). Same prompts; one n
 
 ---
 
-## Legacy (not primary Gotchu path)
+## Legacy (not primary Kehlo path)
 
-`analyze-conversation` / `generate-response` still use older “Wingman” coach prompts. Prefer `generate-replies` for product flows.
+`analyze-conversation` / `generate-response` are legacy coach paths. Prefer `generate-replies` for product flows.
 
 ---
 

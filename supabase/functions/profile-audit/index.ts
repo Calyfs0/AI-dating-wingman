@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     }
     const bio = String(body.bio ?? "").trim().slice(0, 1200);
 
-    const instructions = `You are Gotchu Profile. Analyze ONE dating-profile screenshot (Hinge/Bumble/Tinder/etc).
+    const instructions = `You are Kehlo Profile. Analyze ONE dating-profile screenshot (Hinge/Bumble/Tinder/etc).
 
 Return scores 0–1 for: overall, clarity, personality, approachability, conversationPotential.
 Give 2–4 short photoNotes (keep / replace / reorder style advice — no mean insults).

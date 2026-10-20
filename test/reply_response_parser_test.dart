@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wingman/features/screenshot_reply/models/reply_generation_result.dart';
-import 'package:wingman/features/screenshot_reply/parsers/reply_response_parser.dart';
+import 'package:kehlo/features/screenshot_reply/models/reply_generation_result.dart';
+import 'package:kehlo/features/screenshot_reply/parsers/reply_response_parser.dart';
 
 void main() {
   const parser = ReplyResponseParser();

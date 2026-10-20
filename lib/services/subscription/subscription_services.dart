@@ -6,7 +6,18 @@ abstract class SubscriptionService {
   Future<void> configure({required String appUserId});
   Future<List<SubscriptionOffering>> offerings();
   Future<PurchaseResult> purchase(SubscriptionPackage package);
+
+  /// Consumable Boost (`kehlo_boost_1h`) → server grants 1h Pro.
+  Future<PurchaseResult> purchaseBoost();
+
   Future<PurchaseResult> restore();
+
+  /// Pull RC → server profiles (cancels, renewals, other-device Pro).
+  Future<PurchaseResult> syncEntitlement({bool expectSubscription = false});
+
+  /// Fired when the store reports entitlement changes (optional).
+  void setEntitlementChangeHandler(void Function()? handler);
+
   Stream<EntitlementSnapshot> get entitlementChanges;
 }
 
@@ -47,12 +58,14 @@ class SubscriptionPackage {
     required this.title,
     required this.priceString,
     this.period = 'month',
+    this.isBoost = false,
   });
 
   final String id;
   final String title;
   final String priceString;
   final String period;
+  final bool isBoost;
 }
 
 class PurchaseResult {
@@ -60,11 +73,24 @@ class PurchaseResult {
     required this.success,
     this.message,
     this.isPro = false,
+    this.proExpiresAt,
+    this.kind,
+    this.pendingServerConfirm = false,
   });
 
   final bool success;
   final String? message;
   final bool isPro;
+  final DateTime? proExpiresAt;
+
+  /// `subscription` | `boost` | `none` when known.
+  final String? kind;
+
+  /// Store succeeded; profile may still show Boost until a follow-up sync.
+  final bool pendingServerConfirm;
+
+  bool get isSubscription => kind == 'subscription' && isPro;
+  bool get isBoost => kind == 'boost' && isPro;
 }
 
 class EntitlementSnapshot {
@@ -105,25 +131,8 @@ class LocalSubscriptionService implements SubscriptionService {
 
   @override
   Future<List<SubscriptionOffering>> offerings() async {
-    return const [
-      SubscriptionOffering(
-        id: 'default',
-        packages: [
-          SubscriptionPackage(
-            id: 'pro_monthly',
-            title: 'Wingman Pro',
-            priceString: '\$14.99',
-            period: 'month',
-          ),
-          SubscriptionPackage(
-            id: 'pro_yearly',
-            title: 'Wingman Pro Yearly',
-            priceString: '\$99.99',
-            period: 'year',
-          ),
-        ],
-      ),
-    ];
+    // Fail closed: no fake store prices. Real offerings come from RevenueCat.
+    return const [];
   }
 
   @override
@@ -138,6 +147,15 @@ class LocalSubscriptionService implements SubscriptionService {
   }
 
   @override
+  Future<PurchaseResult> purchaseBoost() async {
+    return const PurchaseResult(
+      success: false,
+      message: 'Connect RevenueCat to enable Boost.',
+      isPro: false,
+    );
+  }
+
+  @override
   Future<PurchaseResult> restore() async {
     return PurchaseResult(
       success: _entitlement.isPro,
@@ -145,6 +163,18 @@ class LocalSubscriptionService implements SubscriptionService {
       message: _entitlement.isPro ? null : 'No active subscription found.',
     );
   }
+
+  @override
+  Future<PurchaseResult> syncEntitlement({bool expectSubscription = false}) async {
+    return PurchaseResult(
+      success: _entitlement.isPro,
+      isPro: _entitlement.isPro,
+      message: _entitlement.isPro ? null : 'No active subscription found.',
+    );
+  }
+
+  @override
+  void setEntitlementChangeHandler(void Function()? handler) {}
 
   @override
   Stream<EntitlementSnapshot> get entitlementChanges async* {

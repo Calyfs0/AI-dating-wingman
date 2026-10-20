@@ -39,7 +39,7 @@ class ProfileAuditController extends ChangeNotifier {
       notifyListeners();
     } on PlatformException {
       errorMessage =
-          'Photo access is needed to pick a profile screenshot. Allow Photos for Gotchu in Settings, then try again.';
+          'Photo access is needed to pick a profile screenshot. Allow Photos for Kehlo in Settings, then try again.';
       notifyListeners();
     }
   }

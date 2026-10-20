@@ -7,7 +7,8 @@ import '../../you/controllers/you_preferences_controller.dart';
 class OnboardingController extends ChangeNotifier {
   OnboardingController(this._you);
 
-  static const onboardedKey = 'gotchu_onboarded';
+  static const onboardedKey = 'kehlo_onboarded';
+  static const _legacyOnboardedKey = 'gotchu_onboarded';
 
   final YouPreferencesController _you;
 
@@ -18,7 +19,13 @@ class OnboardingController extends ChangeNotifier {
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    onboarded = prefs.getBool(onboardedKey) ?? false;
+    onboarded = prefs.getBool(onboardedKey) ??
+        prefs.getBool(_legacyOnboardedKey) ??
+        false;
+    if (onboarded && prefs.containsKey(_legacyOnboardedKey)) {
+      await prefs.setBool(onboardedKey, true);
+      await prefs.remove(_legacyOnboardedKey);
+    }
     vibe = _you.defaultVibe;
     loaded = true;
     notifyListeners();
@@ -45,6 +52,14 @@ class OnboardingController extends ChangeNotifier {
 
   Future<void> complete() async {
     await _you.setDefaultVibe(vibe);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(onboardedKey, true);
+    onboarded = true;
+    notifyListeners();
+  }
+
+  /// Jump straight in — keeps current You vibe defaults.
+  Future<void> skip() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(onboardedKey, true);
     onboarded = true;

@@ -7,6 +7,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../screenshot_reply/models/suggested_replies.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../../screenshot_reply/widgets/tone_icons.dart';
+import '../../subscription/widgets/sent_it_sheet.dart';
+import '../../subscription/widgets/usage_limit_callout.dart';
 import '../controllers/openers_flow_controller.dart';
 
 /// Copy-first Openers results — parity with Reply results hierarchy.
@@ -41,6 +43,10 @@ class _OpenersResultsScreenState extends State<OpenersResultsScreen> {
     final streaming = controller.isStreaming;
     final selectedTone = controller.preferredVibe;
     final message = openers.forTone(selectedTone);
+    final copyReady = !streaming &&
+        !busy &&
+        message.trim().length >= 8 &&
+        message.trim() != '…';
     final meta = _metaText(openers);
 
     return Scaffold(
@@ -119,7 +125,21 @@ class _OpenersResultsScreenState extends State<OpenersResultsScreen> {
                                 tone: selectedTone,
                                 message: message,
                                 copied: controller.copiedConfirmation,
-                                onCopy: () => controller.copyOpener(message),
+                                onCopy: copyReady
+                                    ? () async {
+                                        final ok = await controller
+                                            .copyOpener(message);
+                                        if (!context.mounted || !ok) {
+                                          return;
+                                        }
+                                        await showSentItSheet(
+                                          context,
+                                          attachedPerson:
+                                              controller.attachedPerson,
+                                          copiedText: message,
+                                        );
+                                      }
+                                    : null,
                                 meta: meta,
                                 metaExpanded: _metaExpanded,
                                 onToggleMeta: meta == null
@@ -157,12 +177,17 @@ class _OpenersResultsScreenState extends State<OpenersResultsScreen> {
                           ],
                           if (controller.errorMessage != null) ...[
                             const SizedBox(height: 10),
-                            Text(
-                              controller.errorMessage!,
-                              style: GoogleFonts.plusJakartaSans(
-                                color: AppColors.danger,
+                            if (isUsageLimitMessage(controller.errorMessage))
+                              UsageLimitCallout(
+                                message: controller.errorMessage,
+                              )
+                            else
+                              Text(
+                                controller.errorMessage!,
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: AppColors.danger,
+                                ),
                               ),
-                            ),
                           ],
                         ],
                       ),
@@ -318,7 +343,7 @@ class _HeroOpenerCard extends StatelessWidget {
   final ReplyTone tone;
   final String message;
   final bool copied;
-  final VoidCallback onCopy;
+  final VoidCallback? onCopy;
   final String? meta;
   final bool metaExpanded;
   final VoidCallback? onToggleMeta;
@@ -414,7 +439,7 @@ class _CopyButton extends StatelessWidget {
 
   final Color accent;
   final bool copied;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {

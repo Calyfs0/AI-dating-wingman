@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../screenshot_reply/widgets/desire_backdrop.dart';
 import '../../screenshot_reply/widgets/mockup_components.dart';
+import '../../subscription/widgets/usage_limit_callout.dart';
 import '../controllers/profile_audit_controller.dart';
 
 class ProfileAuditScreen extends StatelessWidget {
@@ -81,7 +82,7 @@ class _UploadView extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Scores, photo notes, and three bio rewrites — same Gotchu vibe.',
+                'Scores, photo notes, and three bio rewrites — same Kehlo vibe.',
                 style: GoogleFonts.plusJakartaSans(
                   color: const Color(0xFFB9AEC8),
                 ),
@@ -147,10 +148,13 @@ class _UploadView extends StatelessWidget {
               ),
               if (c.errorMessage != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  c.errorMessage!,
-                  style: GoogleFonts.plusJakartaSans(color: AppColors.danger),
-                ),
+                if (isUsageLimitMessage(c.errorMessage))
+                  UsageLimitCallout(message: c.errorMessage)
+                else
+                  Text(
+                    c.errorMessage!,
+                    style: GoogleFonts.plusJakartaSans(color: AppColors.danger),
+                  ),
               ],
             ],
           ),
