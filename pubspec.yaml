@@ -1,5 +1,5 @@
 name: kehlo
-description: Kehlo — late-night dating companion. Stuck on a reply? Kehlo.
+description: Kehlo — say it better. Lines for dating and real life.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -55,4 +55,5 @@ flutter:
     - assets/icons/
     - assets/mockups/
     - assets/brand/
+    - assets/design/
     - assets/sounds/
