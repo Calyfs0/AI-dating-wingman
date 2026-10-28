@@ -3,9 +3,9 @@
     "short_name": "Kehlo",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#07050C",
-    "theme_color": "#FF4EAB",
-    "description": "Stuck on a reply? Kehlo.",
+    "background_color": "#FBF6F4",
+    "theme_color": "#E57C94",
+    "description": "Say it better. Create real connections.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
